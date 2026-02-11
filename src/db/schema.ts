@@ -44,6 +44,7 @@ export const whatifScenarios = pgTable('whatif_scenarios', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   modifiedPerSeatPrice: numeric('modified_per_seat_price', { precision: 10, scale: 2 }).notNull(),
+  scenarioData: jsonb('scenario_data'), // Extended: source, lineItemValues, costOverrides, dealAnalysis
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -117,4 +118,18 @@ export const actionLog = pgTable('action_log', {
   inputs: jsonb('inputs').notNull(),
   mutations: jsonb('mutations').notNull(),
   metadata: jsonb('metadata'),
+});
+
+// ===== DOCUMENTS (S3-stored contract PDFs and files) =====
+export const documents = pgTable('documents', {
+  id: text('id').primaryKey(),
+  entityType: text('entity_type').notNull(), // 'client' | 'partner'
+  entityId: text('entity_id').notNull(), // FK to clients.id or partners.id
+  fileName: text('file_name').notNull(),
+  fileSize: integer('file_size').notNull(), // bytes
+  mimeType: text('mime_type').notNull(),
+  s3Key: text('s3_key').notNull(), // S3 object key
+  documentType: text('document_type').notNull().default('contract'), // 'contract' | 'agreement' | 'other'
+  extractionData: jsonb('extraction_data'), // LLM extraction result (if extracted)
+  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
 });

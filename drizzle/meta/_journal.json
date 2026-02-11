@@ -22,6 +22,20 @@
       "when": 1770807266768,
       "tag": "0002_productive_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770812122549,
+      "tag": "0003_empty_magma",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770813744561,
+      "tag": "0004_fuzzy_flatman",
+      "breakpoints": true
     }
   ]
 }

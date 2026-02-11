@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
+import DealComparisonCard from '@/components/lab/DealComparisonCard';
 import { useClientStore } from '@/lib/store/customer-store';
 import { useWhatIfStore } from '@/lib/store/whatif-store';
 import { formatAED } from '@/lib/utils/currency';
@@ -34,6 +36,15 @@ const REVENUE_LINE_ITEMS: RevenueLineItem[] = [
 ];
 
 export default function LabPage() {
+  return (
+    <Suspense fallback={<PageShell title="Pricing Lab" subtitle="Loading..."><div /></PageShell>}>
+      <LabPageContent />
+    </Suspense>
+  );
+}
+
+function LabPageContent() {
+  const searchParams = useSearchParams();
   const clients = useClientStore((s) => s.clients);
   const scenarios = useWhatIfStore((s) => s.scenarios);
   const addScenario = useWhatIfStore((s) => s.addScenario);
@@ -48,6 +59,7 @@ export default function LabPage() {
 
   const [perSeatPrice, setPerSeatPrice] = useState(currentAvgPrice);
   const [scenarioName, setScenarioName] = useState('');
+  const [activeDealAnalysis, setActiveDealAnalysis] = useState<PricingWhatIf['dealAnalysis'] | null>(null);
 
   // Revenue line item state
   const [lineItemValues, setLineItemValues] = useState<Record<string, number>>(() => {
@@ -59,6 +71,20 @@ export default function LabPage() {
   // Cost state
   const [loadingCosts, setLoadingCosts] = useState(true);
   const [editedCosts, setEditedCosts] = useState<Record<CostCategory, number>>({} as Record<CostCategory, number>);
+
+  // Load scenario from URL params (?scenario=whatif-xxx)
+  useEffect(() => {
+    const scenarioId = searchParams.get('scenario');
+    if (!scenarioId) return;
+
+    const scenario = scenarios.find((s) => s.id === scenarioId);
+    if (!scenario) return;
+
+    setPerSeatPrice(scenario.modifiedPerSeatPrice);
+    if (scenario.lineItemValues) setLineItemValues(scenario.lineItemValues);
+    if (scenario.costOverrides) setEditedCosts(scenario.costOverrides as Record<CostCategory, number>);
+    if (scenario.dealAnalysis) setActiveDealAnalysis(scenario.dealAnalysis);
+  }, [searchParams, scenarios]);
 
   // Fetch costs from API
   useEffect(() => {
@@ -158,9 +184,20 @@ export default function LabPage() {
       name: scenarioName.trim(),
       createdAt: new Date().toISOString(),
       modifiedPerSeatPrice: perSeatPrice,
+      source: 'manual',
+      lineItemValues,
+      costOverrides: editedCosts as Record<string, number>,
     };
     addScenario(scenario);
     setScenarioName('');
+  }
+
+  function handleLoadScenario(scenario: PricingWhatIf) {
+    setPerSeatPrice(scenario.modifiedPerSeatPrice);
+    if (scenario.lineItemValues) setLineItemValues(scenario.lineItemValues);
+    if (scenario.costOverrides) setEditedCosts(scenario.costOverrides as Record<CostCategory, number>);
+    if (scenario.dealAnalysis) setActiveDealAnalysis(scenario.dealAnalysis);
+    else setActiveDealAnalysis(null);
   }
 
   const labelStyle = {
@@ -403,6 +440,15 @@ export default function LabPage() {
 
         {/* ===== RESULTS ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Deal Analysis Banner (from contract extraction) */}
+          {activeDealAnalysis && (
+            <DealComparisonCard
+              dealAnalysis={activeDealAnalysis}
+              currentPerSeatPrice={currentAvgPrice}
+              onDismiss={() => setActiveDealAnalysis(null)}
+            />
+          )}
+
           {/* KPI Row 1: Revenue */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             <KPICard title="Subscription MRR" value={formatAED(projectedTotal)} accent={mrrDelta >= 0 ? '#00c853' : '#ff3d00'} subtitle={`${mrrDelta >= 0 ? '+' : ''}${formatAED(mrrDelta)} delta`} />
@@ -580,7 +626,26 @@ export default function LabPage() {
                 <tbody>
                   {scenarios.map((scenario, i) => (
                     <tr key={scenario.id} style={{ borderBottom: '1px solid #e0dbd2', background: i % 2 === 0 ? '#fafafa' : '#fff' }}>
-                      <td style={{ padding: '10px 8px', fontWeight: 600, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif" }}>{scenario.name}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <button
+                          onClick={() => handleLoadScenario(scenario)}
+                          style={{
+                            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+                            fontWeight: 600, color: '#2979ff', fontFamily: "'DM Sans', sans-serif", fontSize: 12,
+                            textDecoration: 'underline', textUnderlineOffset: 2,
+                          }}
+                        >
+                          {scenario.name}
+                        </button>
+                        {scenario.source === 'contract_extraction' && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f3f0ff',
+                            padding: '1px 5px', borderRadius: 3, marginLeft: 6,
+                          }}>
+                            CONTRACT
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace" }}>{formatAED(scenario.modifiedPerSeatPrice)}</td>
                       <td style={{ padding: '10px 8px', fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#999' }}>{scenario.createdAt.slice(0, 10)}</td>
                       <td style={{ padding: '10px 8px' }}>

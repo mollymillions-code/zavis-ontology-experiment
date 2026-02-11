@@ -1,0 +1,1 @@
+ALTER TABLE "whatif_scenarios" ADD COLUMN "scenario_data" jsonb;

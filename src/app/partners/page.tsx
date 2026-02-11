@@ -7,8 +7,9 @@ import { useClientStore } from '@/lib/store/customer-store';
 import { usePartnerStore } from '@/lib/store/partner-store';
 import type { SalesPartnerInfo } from '@/lib/config/sales-partners';
 import { formatAED } from '@/lib/utils/currency';
-import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import type { Client } from '@/lib/models/platform-types';
+import PartnerDetailPanel from '@/components/partners/PartnerDetailPanel';
 
 interface ClientCommission {
   client: Client;
@@ -35,23 +36,21 @@ export default function SalesPartnersPage() {
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newPartner, setNewPartner] = useState({ name: '', commissionPercentage: 10, oneTimeCommissionPercentage: 15 });
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<SalesPartnerInfo | undefined>(undefined);
 
-  function handleAddPartner() {
-    if (!newPartner.name.trim()) return;
-    const partner: SalesPartnerInfo = {
-      id: newPartner.name.toLowerCase().replace(/\s+/g, '-'),
-      name: newPartner.name.trim(),
-      joinedDate: new Date().toISOString().split('T')[0],
-      commissionPercentage: newPartner.commissionPercentage,
-      oneTimeCommissionPercentage: newPartner.oneTimeCommissionPercentage,
-      totalPaid: 0,
-      isActive: true,
-    };
+  function handleOpenAdd() {
+    setEditingPartner(undefined);
+    setPanelOpen(true);
+  }
+
+  function handleOpenEdit(partner: SalesPartnerInfo) {
+    setEditingPartner(partner);
+    setPanelOpen(true);
+  }
+
+  function handlePanelSave(partner: SalesPartnerInfo) {
     addPartner(partner);
-    setNewPartner({ name: '', commissionPercentage: 10, oneTimeCommissionPercentage: 15 });
-    setShowAddForm(false);
   }
 
   const partners = allPartners();
@@ -163,13 +162,13 @@ export default function SalesPartnersPage() {
       subtitle="Commission tracking and partner performance"
       actions={
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={handleOpenAdd}
           style={{
             padding: '8px 16px',
             borderRadius: 8,
             border: 'none',
-            background: showAddForm ? '#ff3d00' : '#00c853',
-            color: showAddForm ? '#fff' : '#1a1a1a',
+            background: '#00c853',
+            color: '#1a1a1a',
             fontSize: 13,
             fontWeight: 700,
             fontFamily: "'DM Sans', sans-serif",
@@ -179,113 +178,17 @@ export default function SalesPartnersPage() {
             gap: 6,
           }}
         >
-          {showAddForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add Partner</>}
+          <Plus size={14} /> Add Partner
         </button>
       }
     >
-      {/* Add Partner Form */}
-      {showAddForm && (
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: 12,
-            padding: 20,
-            border: '2px solid #00c853',
-            marginBottom: 20,
-            boxShadow: '0 4px 12px rgba(0,200,83,0.12)',
-          }}
-        >
-          <h4 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif", marginBottom: 16, marginTop: 0 }}>
-            New Sales Partner
-          </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
-            <div>
-              <label style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", display: 'block', marginBottom: 4 }}>
-                Partner Name *
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. John Smith"
-                value={newPartner.name}
-                onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #e0dbd2',
-                  fontSize: 13,
-                  fontFamily: "'DM Sans', sans-serif",
-                  outline: 'none',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", display: 'block', marginBottom: 4 }}>
-                MRR Commission %
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.5}
-                value={newPartner.commissionPercentage}
-                onChange={(e) => setNewPartner({ ...newPartner, commissionPercentage: Number(e.target.value) || 0 })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #e0dbd2',
-                  fontSize: 13,
-                  fontFamily: "'Space Mono', monospace",
-                  fontWeight: 700,
-                  outline: 'none',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", display: 'block', marginBottom: 4 }}>
-                One-Time Commission %
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.5}
-                value={newPartner.oneTimeCommissionPercentage}
-                onChange={(e) => setNewPartner({ ...newPartner, oneTimeCommissionPercentage: Number(e.target.value) || 0 })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #e0dbd2',
-                  fontSize: 13,
-                  fontFamily: "'Space Mono', monospace",
-                  fontWeight: 700,
-                  outline: 'none',
-                }}
-              />
-            </div>
-            <button
-              onClick={handleAddPartner}
-              disabled={!newPartner.name.trim()}
-              style={{
-                padding: '8px 20px',
-                borderRadius: 8,
-                border: 'none',
-                background: newPartner.name.trim() ? '#00c853' : '#ccc',
-                color: '#1a1a1a',
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: "'DM Sans', sans-serif",
-                cursor: newPartner.name.trim() ? 'pointer' : 'not-allowed',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Add
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Partner Detail Panel (slide-over) */}
+      <PartnerDetailPanel
+        partner={editingPartner}
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        onSave={handlePanelSave}
+      />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
@@ -389,7 +292,6 @@ export default function SalesPartnersPage() {
                           : <ChevronRight size={14} style={{ color: '#999' }} />}
                       </td>
                       <td
-                        onClick={() => togglePartner(partner.id)}
                         style={{
                           padding: '14px 8px',
                           fontFamily: 'DM Sans, sans-serif',
@@ -398,7 +300,24 @@ export default function SalesPartnersPage() {
                           color: '#1a1a1a',
                         }}
                       >
-                        {partner.name}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(partner); }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            color: '#1a1a1a',
+                            fontFamily: 'DM Sans, sans-serif',
+                            fontSize: 14,
+                            fontWeight: 600,
+                            textDecoration: 'underline',
+                            textDecorationColor: '#e0dbd2',
+                            textUnderlineOffset: 3,
+                          }}
+                        >
+                          {partner.name}
+                        </button>
                         {!partner.isActive && (
                           <span style={{ marginLeft: 8, fontSize: 10, color: '#999', fontWeight: 500 }}>
                             (Inactive)

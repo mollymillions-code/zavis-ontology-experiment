@@ -111,7 +111,7 @@ export function snapshotToDbValues(s: MonthlySnapshot) {
 // ===== WHAT-IF SCENARIOS =====
 
 export function dbRowToWhatIf(row: Record<string, unknown>): PricingWhatIf {
-  return {
+  const base: PricingWhatIf = {
     id: row.id as string,
     name: row.name as string,
     createdAt: row.createdAt instanceof Date
@@ -119,13 +119,32 @@ export function dbRowToWhatIf(row: Record<string, unknown>): PricingWhatIf {
       : (row.createdAt as string),
     modifiedPerSeatPrice: Number(row.modifiedPerSeatPrice) || 0,
   };
+
+  // Merge extended scenario data if present
+  if (row.scenarioData && typeof row.scenarioData === 'object') {
+    const data = row.scenarioData as Record<string, unknown>;
+    if (data.source) base.source = data.source as PricingWhatIf['source'];
+    if (data.lineItemValues) base.lineItemValues = data.lineItemValues as Record<string, number>;
+    if (data.costOverrides) base.costOverrides = data.costOverrides as Record<string, number>;
+    if (data.dealAnalysis) base.dealAnalysis = data.dealAnalysis as PricingWhatIf['dealAnalysis'];
+  }
+
+  return base;
 }
 
 export function whatIfToDbValues(w: PricingWhatIf) {
+  // Pack extended fields into scenarioData JSONB
+  const scenarioData: Record<string, unknown> = {};
+  if (w.source) scenarioData.source = w.source;
+  if (w.lineItemValues) scenarioData.lineItemValues = w.lineItemValues;
+  if (w.costOverrides) scenarioData.costOverrides = w.costOverrides;
+  if (w.dealAnalysis) scenarioData.dealAnalysis = w.dealAnalysis;
+
   return {
     id: w.id,
     name: w.name,
     modifiedPerSeatPrice: String(w.modifiedPerSeatPrice),
+    scenarioData: Object.keys(scenarioData).length > 0 ? scenarioData : null,
     createdAt: new Date(w.createdAt),
   };
 }

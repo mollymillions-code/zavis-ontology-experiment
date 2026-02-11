@@ -4,56 +4,26 @@ import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
 import { X } from 'lucide-react';
-import type { Client } from '@/lib/models/platform-types';
-import type { ContractExtraction } from '@/lib/schemas/contract-extraction';
-import ClientForm from './CustomerForm';
-import ContractUploadFlow from './ContractUploadFlow';
+import type { SalesPartnerInfo } from '@/lib/config/sales-partners';
+import PartnerForm from './PartnerForm';
+import PartnerContractUploadFlow from './PartnerContractUploadFlow';
 import DocumentsFolder from '@/components/shared/DocumentsFolder';
-import { useWhatIfStore } from '@/lib/store/whatif-store';
-import { useRouter } from 'next/navigation';
 
-interface ClientDetailPanelProps {
-  client?: Client;
+interface PartnerDetailPanelProps {
+  partner?: SalesPartnerInfo;
   open: boolean;
   onClose: () => void;
-  onSave: (client: Client) => void;
+  onSave: (partner: SalesPartnerInfo) => void;
 }
 
-export default function ClientDetailPanel({ client, open, onClose, onSave }: ClientDetailPanelProps) {
-  const isEdit = !!client;
+export default function PartnerDetailPanel({ partner, open, onClose, onSave }: PartnerDetailPanelProps) {
+  const isEdit = !!partner;
   const [activeTab, setActiveTab] = useState<string>('manual');
-  const [prefillData, setPrefillData] = useState<Partial<Client> | undefined>(undefined);
-  const addScenario = useWhatIfStore((s) => s.addScenario);
-  const router = useRouter();
+  const [prefillData, setPrefillData] = useState<Partial<SalesPartnerInfo> | undefined>(undefined);
 
-  function handleSwitchToManual(prefill: Partial<Client>) {
+  function handleSwitchToManual(prefill: Partial<SalesPartnerInfo>) {
     setPrefillData(prefill);
     setActiveTab('manual');
-  }
-
-  function handleSendToLab(extraction: ContractExtraction) {
-    const scenario = {
-      id: `whatif-${Date.now()}`,
-      name: `Contract: ${extraction.customer.name}`,
-      createdAt: new Date().toISOString(),
-      modifiedPerSeatPrice: extraction.analysis.effectivePerSeatRate || extraction.customer.perSeatCost || 249,
-      source: 'contract_extraction' as const,
-      dealAnalysis: {
-        customerName: extraction.customer.name,
-        summary: extraction.analysis.summary,
-        comparisonVerdict: extraction.analysis.comparisonToStandard.verdict,
-        riskCount: {
-          low: extraction.analysis.risks.filter((r) => r.severity === 'low').length,
-          medium: extraction.analysis.risks.filter((r) => r.severity === 'medium').length,
-          high: extraction.analysis.risks.filter((r) => r.severity === 'high').length,
-        },
-        effectivePerSeatRate: extraction.analysis.effectivePerSeatRate,
-        recommendations: extraction.analysis.recommendations,
-      },
-    };
-    addScenario(scenario);
-    onClose();
-    router.push(`/lab?scenario=${scenario.id}`);
   }
 
   function handleClose() {
@@ -62,28 +32,17 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
     onClose();
   }
 
-  // Build a prefilled client object for the form
-  const formClient = prefillData
+  const formPartner = prefillData
     ? {
-        id: `cli-${Date.now()}`,
+        id: prefillData.id || prefillData.name?.toLowerCase().replace(/\s+/g, '-') || '',
         name: prefillData.name || '',
-        salesPartner: prefillData.salesPartner || null,
-        status: prefillData.status || 'active',
-        pricingModel: prefillData.pricingModel || 'per_seat',
-        perSeatCost: prefillData.perSeatCost ?? null,
-        seatCount: prefillData.seatCount ?? null,
-        billingCycle: prefillData.billingCycle || 'Monthly',
-        plan: prefillData.plan || null,
-        discount: prefillData.discount || 0,
-        mrr: prefillData.mrr || 0,
-        oneTimeRevenue: prefillData.oneTimeRevenue || 0,
-        annualRunRate: (prefillData.mrr || 0) * 12,
-        onboardingDate: prefillData.onboardingDate || null,
-        notes: prefillData.notes,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as Client
-    : client;
+        joinedDate: prefillData.joinedDate || new Date().toISOString().split('T')[0],
+        commissionPercentage: prefillData.commissionPercentage ?? 10,
+        oneTimeCommissionPercentage: prefillData.oneTimeCommissionPercentage ?? 15,
+        totalPaid: prefillData.totalPaid || 0,
+        isActive: prefillData.isActive ?? true,
+      } as SalesPartnerInfo
+    : partner;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -130,7 +89,7 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
                 margin: 0,
               }}
             >
-              {isEdit ? 'Edit Client' : 'Add Client'}
+              {isEdit ? `Edit Partner — ${partner.name}` : 'Add Partner'}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
@@ -148,28 +107,26 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
           </div>
 
           {/* Content */}
-          <div style={{ padding: 24 }}>
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
             {isEdit ? (
-              /* Edit mode — form + documents folder */
+              /* Edit mode — form + documents */
               <>
-                <ClientForm
-                  client={client}
-                  onSave={(c) => {
-                    onSave(c);
+                <PartnerForm
+                  partner={partner}
+                  onSave={(p) => {
+                    onSave(p);
                     handleClose();
                   }}
                   onCancel={handleClose}
                 />
-                <div style={{ marginTop: 20 }}>
-                  <DocumentsFolder
-                    entityType="client"
-                    entityId={client.id}
-                    entityName={client.name}
-                  />
-                </div>
+                <DocumentsFolder
+                  entityType="partner"
+                  entityId={partner.id}
+                  entityName={partner.name}
+                />
               </>
             ) : (
-              /* Add mode — tabs for Manual Entry vs Upload Contract */
+              /* Add mode — tabs */
               <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
                 <Tabs.List
                   style={{
@@ -214,15 +171,15 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
                       transition: 'all 0.15s',
                     }}
                   >
-                    Upload Contract
+                    Upload Agreement
                   </Tabs.Trigger>
                 </Tabs.List>
 
                 <Tabs.Content value="manual">
-                  <ClientForm
-                    client={formClient}
-                    onSave={(c) => {
-                      onSave(c);
+                  <PartnerForm
+                    partner={formPartner}
+                    onSave={(p) => {
+                      onSave(p);
                       handleClose();
                     }}
                     onCancel={handleClose}
@@ -230,13 +187,12 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
                 </Tabs.Content>
 
                 <Tabs.Content value="upload">
-                  <ContractUploadFlow
-                    onCreateClient={(c) => {
-                      onSave(c);
+                  <PartnerContractUploadFlow
+                    onCreatePartner={(p) => {
+                      onSave(p);
                       handleClose();
                     }}
                     onSwitchToManual={handleSwitchToManual}
-                    onSendToLab={handleSendToLab}
                   />
                 </Tabs.Content>
               </Tabs.Root>
