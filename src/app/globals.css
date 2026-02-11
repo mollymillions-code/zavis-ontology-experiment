@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --zavis-bg: #f5f0e8;
+  --zavis-card: #ffffff;
+  --zavis-accent: #00c853;
+  --zavis-accent-dark: #00a844;
+  --zavis-dark: #1a1a1a;
+  --zavis-mid: #666666;
+  --zavis-light: #999999;
+  --zavis-border: #e0dbd2;
+  --zavis-red: #ff3d00;
+  --zavis-orange: #ff9100;
+  --zavis-blue: #2979ff;
+  --zavis-purple: #7c4dff;
+}
+
+body {
+  font-family: 'DM Sans', 'Helvetica Neue', sans-serif;
+  color: var(--zavis-dark);
+  background: var(--zavis-bg);
+}
+
+/* Mono numbers */
+.font-mono-nums {
+  font-family: 'Space Mono', 'Courier New', monospace;
+}
+
+/* Custom scrollbar — warm */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--zavis-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--zavis-light);
+}
+
+/* Recharts tooltip override */
+.recharts-tooltip-wrapper {
+  z-index: 50 !important;
+}
+
+/* Zavis card base */
+.zavis-card {
+  background: var(--zavis-card);
+  border: 1px solid var(--zavis-border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
