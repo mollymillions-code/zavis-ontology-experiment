@@ -4,6 +4,12 @@ import type {
   MonthlySnapshot,
   PricingWhatIf,
   MonthlyCost,
+  Contract,
+  RevenueStream,
+  Partner,
+  CustomerPartnerLink,
+  ActionLogEntry,
+  ActionMutationRecord,
 } from '@/lib/models/platform-types';
 
 // ===== CLIENTS =====
@@ -149,5 +155,153 @@ export function costToDbValues(c: MonthlyCost) {
     type: c.type,
     notes: c.notes ?? null,
     createdAt: new Date(c.createdAt),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// ONTOLOGY TABLE MAPPERS
+// ═══════════════════════════════════════════════════════════
+
+// ===== PARTNERS =====
+
+export function dbRowToPartner(row: Record<string, unknown>): Partner {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    commissionPct: Number(row.commissionPct) || 0,
+    oneTimeCommissionPct: Number(row.oneTimeCommissionPct) || 0,
+    totalPaid: Number(row.totalPaid) || 0,
+    isActive: row.isActive as boolean,
+    joinedDate: (row.joinedDate as string) || null,
+    createdAt: row.createdAt instanceof Date
+      ? (row.createdAt as Date).toISOString()
+      : (row.createdAt as string),
+  };
+}
+
+export function partnerToDbValues(p: Partner) {
+  return {
+    id: p.id,
+    name: p.name,
+    commissionPct: String(p.commissionPct),
+    oneTimeCommissionPct: String(p.oneTimeCommissionPct),
+    totalPaid: String(p.totalPaid),
+    isActive: p.isActive,
+    joinedDate: p.joinedDate ?? null,
+    createdAt: new Date(p.createdAt),
+  };
+}
+
+// ===== CONTRACTS =====
+
+export function dbRowToContract(row: Record<string, unknown>): Contract {
+  return {
+    id: row.id as string,
+    customerId: row.customerId as string,
+    startDate: row.startDate as string,
+    endDate: (row.endDate as string) || null,
+    billingCycle: (row.billingCycle as string) || null,
+    plan: (row.plan as string) || null,
+    terms: (row.terms as Record<string, unknown>) || null,
+    status: row.status as Contract['status'],
+    createdAt: row.createdAt instanceof Date
+      ? (row.createdAt as Date).toISOString()
+      : (row.createdAt as string),
+  };
+}
+
+export function contractToDbValues(c: Contract) {
+  return {
+    id: c.id,
+    customerId: c.customerId,
+    startDate: c.startDate,
+    endDate: c.endDate ?? null,
+    billingCycle: c.billingCycle ?? null,
+    plan: c.plan ?? null,
+    terms: c.terms ?? null,
+    status: c.status,
+    createdAt: new Date(c.createdAt),
+  };
+}
+
+// ===== REVENUE STREAMS =====
+
+export function dbRowToRevenueStream(row: Record<string, unknown>): RevenueStream {
+  return {
+    id: row.id as string,
+    contractId: row.contractId as string,
+    type: row.type as RevenueStream['type'],
+    amount: Number(row.amount) || 0,
+    frequency: row.frequency as RevenueStream['frequency'],
+    startDate: (row.startDate as string) || null,
+    endDate: (row.endDate as string) || null,
+    createdAt: row.createdAt instanceof Date
+      ? (row.createdAt as Date).toISOString()
+      : (row.createdAt as string),
+  };
+}
+
+export function revenueStreamToDbValues(rs: RevenueStream) {
+  return {
+    id: rs.id,
+    contractId: rs.contractId,
+    type: rs.type,
+    amount: String(rs.amount),
+    frequency: rs.frequency,
+    startDate: rs.startDate ?? null,
+    endDate: rs.endDate ?? null,
+    createdAt: new Date(rs.createdAt),
+  };
+}
+
+// ===== CUSTOMER-PARTNER LINKS =====
+
+export function dbRowToCustomerPartnerLink(row: Record<string, unknown>): CustomerPartnerLink {
+  return {
+    id: row.id as string,
+    customerId: row.customerId as string,
+    partnerId: row.partnerId as string,
+    attributionPct: Number(row.attributionPct) || 100,
+    createdAt: row.createdAt instanceof Date
+      ? (row.createdAt as Date).toISOString()
+      : (row.createdAt as string),
+  };
+}
+
+export function customerPartnerLinkToDbValues(l: CustomerPartnerLink) {
+  return {
+    id: l.id,
+    customerId: l.customerId,
+    partnerId: l.partnerId,
+    attributionPct: String(l.attributionPct),
+    createdAt: new Date(l.createdAt),
+  };
+}
+
+// ===== ACTION LOG =====
+
+export function dbRowToActionLogEntry(row: Record<string, unknown>): ActionLogEntry {
+  return {
+    id: row.id as string,
+    actionType: row.actionType as string,
+    actor: row.actor as string,
+    timestamp: row.timestamp instanceof Date
+      ? (row.timestamp as Date).toISOString()
+      : (row.timestamp as string),
+    inputs: row.inputs as Record<string, unknown>,
+    mutations: row.mutations as ActionMutationRecord[],
+    metadata: (row.metadata as Record<string, unknown>) || undefined,
+  };
+}
+
+export function actionLogEntryToDbValues(e: ActionLogEntry) {
+  return {
+    id: e.id,
+    actionType: e.actionType,
+    actor: e.actor,
+    timestamp: new Date(e.timestamp),
+    inputs: e.inputs,
+    mutations: e.mutations,
+    metadata: e.metadata ?? null,
   };
 }
