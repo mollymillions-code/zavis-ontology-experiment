@@ -1,4 +1,4 @@
-import { pgTable, text, numeric, jsonb, timestamp, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, numeric, jsonb, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
 
 // ===== CLIENTS =====
 export const clients = pgTable('clients', {
@@ -56,4 +56,65 @@ export const monthlyCosts = pgTable('monthly_costs', {
   type: text('type').notNull().default('actual'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ═══════════════════════════════════════════════════════════
+// ONTOLOGY TABLES (Palantir-inspired entity/link/action model)
+// ═══════════════════════════════════════════════════════════
+
+// ===== PARTNERS (promoted from config → first-class entity) =====
+export const partners = pgTable('partners', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  commissionPct: numeric('commission_pct', { precision: 5, scale: 2 }).notNull().default('0'),
+  oneTimeCommissionPct: numeric('one_time_commission_pct', { precision: 5, scale: 2 }).notNull().default('0'),
+  totalPaid: numeric('total_paid', { precision: 10, scale: 2 }).notNull().default('0'),
+  isActive: boolean('is_active').notNull().default(true),
+  joinedDate: text('joined_date'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== CONTRACTS (new — binds Customer to terms) =====
+export const contracts = pgTable('contracts', {
+  id: text('id').primaryKey(),
+  customerId: text('customer_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date'),
+  billingCycle: text('billing_cycle'),
+  plan: text('plan'),
+  terms: jsonb('terms'),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== REVENUE STREAMS (new — replaces embedded mrr/oneTimeRevenue) =====
+export const revenueStreams = pgTable('revenue_streams', {
+  id: text('id').primaryKey(),
+  contractId: text('contract_id').notNull().references(() => contracts.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'subscription' | 'one_time' | 'add_on' | 'managed_service'
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  frequency: text('frequency'), // 'monthly' | 'quarterly' | 'annual' | 'one_time'
+  startDate: text('start_date'),
+  endDate: text('end_date'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== CUSTOMER-PARTNER LINKS (explicit typed relationship) =====
+export const customerPartnerLinks = pgTable('customer_partner_links', {
+  id: text('id').primaryKey(),
+  customerId: text('customer_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  partnerId: text('partner_id').notNull().references(() => partners.id, { onDelete: 'cascade' }),
+  attributionPct: numeric('attribution_pct', { precision: 5, scale: 2 }).notNull().default('100'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== ACTION LOG (immutable audit trail) =====
+export const actionLog = pgTable('action_log', {
+  id: text('id').primaryKey(),
+  actionType: text('action_type').notNull(),
+  actor: text('actor').notNull().default('system'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+  inputs: jsonb('inputs').notNull(),
+  mutations: jsonb('mutations').notNull(),
+  metadata: jsonb('metadata'),
 });

@@ -148,6 +148,81 @@ export interface WhatIfClientImpact {
   isAffected: boolean;
 }
 
+// ========== CONTRACT (NEW — Ontology) ==========
+
+export type ContractStatus = 'active' | 'expired' | 'terminated';
+
+export interface Contract {
+  id: string;
+  customerId: string;
+  startDate: string;
+  endDate?: string | null;
+  billingCycle?: string | null;
+  plan?: string | null;
+  terms?: Record<string, unknown> | null;
+  status: ContractStatus;
+  createdAt: string;
+}
+
+// ========== REVENUE STREAM (NEW — Ontology) ==========
+
+export type RevenueStreamType = 'subscription' | 'one_time' | 'add_on' | 'managed_service';
+export type RevenueFrequency = 'monthly' | 'quarterly' | 'annual' | 'one_time';
+
+export interface RevenueStream {
+  id: string;
+  contractId: string;
+  type: RevenueStreamType;
+  amount: number;
+  frequency: RevenueFrequency;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdAt: string;
+}
+
+// ========== PARTNER (NEW — Ontology, promoted from config) ==========
+
+export interface Partner {
+  id: string;
+  name: string;
+  commissionPct: number;
+  oneTimeCommissionPct: number;
+  totalPaid: number;
+  isActive: boolean;
+  joinedDate?: string | null;
+  createdAt: string;
+}
+
+// ========== CUSTOMER-PARTNER LINK (NEW — Ontology) ==========
+
+export interface CustomerPartnerLink {
+  id: string;
+  customerId: string;
+  partnerId: string;
+  attributionPct: number; // default 100
+  createdAt: string;
+}
+
+// ========== ACTION LOG (NEW — Ontology) ==========
+
+export interface ActionMutationRecord {
+  objectType: string;
+  objectId: string;
+  operation: 'create' | 'update' | 'delete';
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+}
+
+export interface ActionLogEntry {
+  id: string;
+  actionType: string;
+  actor: string;
+  timestamp: string;
+  inputs: Record<string, unknown>;
+  mutations: ActionMutationRecord[];
+  metadata?: Record<string, unknown>;
+}
+
 // ========== DASHBOARD METRICS ==========
 
 export interface DashboardMetrics {

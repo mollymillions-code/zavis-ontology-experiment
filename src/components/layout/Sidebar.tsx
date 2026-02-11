@@ -13,6 +13,7 @@ import {
   Wallet,
   Target,
   Handshake,
+  Network,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: '/economics', label: 'Unit Economics', icon: DollarSign },
   { href: '/projections', label: 'Projections', icon: LineChart },
   { href: '/lab', label: 'Pricing Lab', icon: FlaskConical },
+  { href: '/ontology', label: 'Ontology', icon: Network },
 ];
 
 export default function Sidebar() {

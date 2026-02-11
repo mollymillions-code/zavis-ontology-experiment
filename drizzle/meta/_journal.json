@@ -15,6 +15,13 @@
       "when": 1770731849381,
       "tag": "0001_volatile_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770807266768,
+      "tag": "0002_productive_maddog",
+      "breakpoints": true
     }
   ]
 }
