@@ -131,11 +131,25 @@ export interface MonthlySnapshot {
 
 // ========== PRICING LAB ==========
 
+export interface DealAnalysisSnapshot {
+  customerName: string;
+  summary: string;
+  comparisonVerdict: string;
+  riskCount: { low: number; medium: number; high: number };
+  effectivePerSeatRate: number | null;
+  recommendations: string[];
+}
+
 export interface PricingWhatIf {
   id: string;
   name: string;
   createdAt: string;
   modifiedPerSeatPrice: number;
+  // Extended fields for contract-derived scenarios
+  source?: 'manual' | 'contract_extraction';
+  lineItemValues?: Record<string, number>;
+  costOverrides?: Record<string, number>;
+  dealAnalysis?: DealAnalysisSnapshot;
 }
 
 export interface WhatIfClientImpact {
