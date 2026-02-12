@@ -1,7 +1,10 @@
 'use client';
 
-import { useMemo, useState, useRef } from 'react';
-import type { ReceivableEntry } from '@/lib/models/platform-types';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText, ExternalLink, Plus } from 'lucide-react';
+import type { ReceivableEntry, Invoice, InvoiceStatus } from '@/lib/models/platform-types';
+import { INVOICE_STATUS_COLORS, INVOICE_STATUS_LABELS } from '@/lib/models/platform-types';
 import { formatAED } from '@/lib/utils/currency';
 import { RECEIVABLE_STATUS_COLORS } from '@/lib/models/pricing-data';
 import { classifyRevenue, REVENUE_TYPE_LABELS, REVENUE_TYPE_COLORS } from '@/lib/utils/receivables';
@@ -9,6 +12,7 @@ import { classifyRevenue, REVENUE_TYPE_LABELS, REVENUE_TYPE_COLORS } from '@/lib
 interface ReceivablesTableProps {
   receivables: ReceivableEntry[];
   clientNames: Record<string, string>;
+  invoices?: Invoice[];
 }
 
 const STATUS_BG: Record<string, string> = {
@@ -31,6 +35,7 @@ function formatFullMonth(m: string) {
   return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${y}`;
 }
 
+// ─── Hover Tooltip ───
 interface TooltipData {
   entries: ReceivableEntry[];
   month: string;
@@ -106,15 +111,250 @@ function CellTooltip({ data, clientName }: { data: TooltipData; clientName: stri
           </div>
         );
       })}
+      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 8, fontStyle: 'italic' }}>
+        Click for invoice options
+      </p>
     </div>
   );
 }
 
-export default function ReceivablesTable({ receivables, clientNames }: ReceivablesTableProps) {
+// ─── Click Popover ───
+interface PopoverData {
+  entries: ReceivableEntry[];
+  month: string;
+  clientId: string;
+  x: number;
+  y: number;
+}
+
+function InvoiceStatusBadgeInline({ status }: { status: InvoiceStatus }) {
+  const color = INVOICE_STATUS_COLORS[status];
+  const label = INVOICE_STATUS_LABELS[status];
+  return (
+    <span style={{
+      padding: '2px 8px', borderRadius: 5, fontSize: 8, fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: 0.4,
+      background: `${color}20`, color,
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      {label}
+    </span>
+  );
+}
+
+function CellPopover({
+  data,
+  clientName,
+  invoiceMap,
+  onClose,
+}: {
+  data: PopoverData;
+  clientName: string;
+  invoiceMap: Map<string, Invoice>;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  const entriesWithStatus = data.entries.map((entry) => ({
+    entry,
+    invoice: invoiceMap.get(entry.id) || null,
+  }));
+
+  const allHaveInvoices = entriesWithStatus.every((e) => e.invoice);
+
+  return (
+    <div
+      ref={popoverRef}
+      style={{
+        position: 'fixed',
+        left: data.x,
+        top: data.y + 4,
+        transform: 'translateX(-50%)',
+        background: '#ffffff',
+        border: '1px solid #e0dbd2',
+        borderRadius: 12,
+        padding: 0,
+        color: '#1a1a1a',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08)',
+        zIndex: 200,
+        maxWidth: 360,
+        minWidth: 280,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header */}
+      <div style={{
+        padding: '12px 16px 10px',
+        borderBottom: '1px solid #f0ebe0',
+        background: '#faf8f4',
+      }}>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, color: '#1a1a1a', marginBottom: 1 }}>
+          {clientName}
+        </p>
+        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#999' }}>
+          {formatFullMonth(data.month)}
+        </p>
+      </div>
+
+      {/* Entries */}
+      <div style={{ padding: '8px 0', maxHeight: 320, overflowY: 'auto' }}>
+        {entriesWithStatus.map(({ entry, invoice }, i) => {
+          const revType = classifyRevenue(entry.description);
+          const revColor = REVENUE_TYPE_COLORS[revType];
+
+          return (
+            <div
+              key={entry.id}
+              style={{
+                padding: '10px 16px',
+                borderBottom: i < entriesWithStatus.length - 1 ? '1px solid #f5f0e8' : 'none',
+              }}
+            >
+              <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>
+                  {formatAED(entry.amount, 0)}
+                </span>
+                <span style={{
+                  padding: '2px 6px', borderRadius: 5, fontSize: 7, fontWeight: 700,
+                  textTransform: 'uppercase', background: `${revColor}15`, color: revColor,
+                  letterSpacing: 0.4, fontFamily: "'DM Sans', sans-serif",
+                }}>
+                  {REVENUE_TYPE_LABELS[revType]}
+                </span>
+              </div>
+
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: '#666', lineHeight: 1.3, marginBottom: 8 }}>
+                {entry.description}
+              </p>
+
+              {invoice ? (
+                <div
+                  onClick={() => router.push(`/invoices/${invoice.id}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 10px', borderRadius: 8,
+                    background: '#f5f0e8', cursor: 'pointer',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#ede8dc'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f0e8'; }}
+                >
+                  <FileText size={13} style={{ color: '#888', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700, color: '#1a1a1a' }}>
+                        {invoice.invoiceNumber}
+                      </span>
+                      <InvoiceStatusBadgeInline status={invoice.status} />
+                    </div>
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 9, color: '#999', marginTop: 1 }}>
+                      {formatAED(invoice.total)} · Due {invoice.dueDate}
+                    </p>
+                  </div>
+                  <ExternalLink size={12} style={{ color: '#bbb', flexShrink: 0 }} />
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push(`/invoices/new?receivableId=${entry.id}&clientId=${entry.clientId}`);
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    width: '100%', padding: '8px 10px', borderRadius: 8,
+                    border: '1px dashed #d0cbc2', background: 'transparent',
+                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 11, fontWeight: 600, color: '#00a844',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f0fdf4';
+                    e.currentTarget.style.borderColor = '#00c853';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#d0cbc2';
+                  }}
+                >
+                  <Plus size={13} />
+                  Generate Invoice
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer — bulk action if multiple entries without invoices */}
+      {!allHaveInvoices && data.entries.length > 1 && (
+        <div style={{
+          padding: '10px 16px',
+          borderTop: '1px solid #f0ebe0',
+          background: '#faf8f4',
+        }}>
+          <button
+            onClick={() => {
+              const first = entriesWithStatus.find((e) => !e.invoice);
+              if (first) {
+                onClose();
+                router.push(`/invoices/new?receivableId=${first.entry.id}&clientId=${data.clientId}`);
+              }
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '8px 12px', borderRadius: 8,
+              border: 'none', background: '#00c853', color: '#1a1a1a',
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              fontSize: 11, fontWeight: 700,
+            }}
+          >
+            <Plus size={13} />
+            Generate Invoice for This Month
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ReceivablesTable({ receivables, clientNames, invoices = [] }: ReceivablesTableProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [popover, setPopover] = useState<PopoverData | null>(null);
   const tooltipClientRef = useRef<string>('');
 
+  // Build receivableId → Invoice lookup
+  const invoiceMap = useMemo(() => {
+    const map = new Map<string, Invoice>();
+    for (const inv of invoices) {
+      if (inv.receivableId) {
+        map.set(inv.receivableId, inv);
+      }
+    }
+    return map;
+  }, [invoices]);
+
+  // Set of receivable IDs with invoices for visual indicators
+  const invoicedReceivableIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const inv of invoices) {
+      if (inv.receivableId) set.add(inv.receivableId);
+    }
+    return set;
+  }, [invoices]);
+
   function showTooltip(entries: ReceivableEntry[], month: string, clientId: string, e: React.MouseEvent) {
+    if (popover) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     tooltipClientRef.current = clientId;
     setTooltip({
@@ -126,9 +366,24 @@ export default function ReceivablesTable({ receivables, clientNames }: Receivabl
   }
 
   function hideTooltip() {
+    if (popover) return;
     setTooltip(null);
     tooltipClientRef.current = '';
   }
+
+  function handleCellClick(entries: ReceivableEntry[], month: string, clientId: string, e: React.MouseEvent) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip(null);
+    setPopover({
+      entries,
+      month,
+      clientId,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom,
+    });
+  }
+
+  const closePopover = useCallback(() => setPopover(null), []);
 
   // Build pivot: clientId → month → entries[]
   const { months, clientIds, pivot, clientTotals, monthTotals, grandTotal } = useMemo(() => {
@@ -145,7 +400,6 @@ export default function ReceivablesTable({ receivables, clientNames }: Receivabl
     }
 
     const months = Array.from(monthSet).sort();
-    // Sort clients by total amount descending
     const clientIds = Array.from(clientSet).sort((a, b) => {
       const totalA = receivables.filter((r) => r.clientId === a).reduce((s, r) => s + r.amount, 0);
       const totalB = receivables.filter((r) => r.clientId === b).reduce((s, r) => s + r.amount, 0);
@@ -279,17 +533,21 @@ export default function ReceivablesTable({ receivables, clientNames }: Receivabl
                 const statusColor = RECEIVABLE_STATUS_COLORS[primaryStatus] || '#999';
                 const bg = STATUS_BG[primaryStatus] || 'transparent';
 
-                // Determine revenue type for the cell
                 const types = new Set(entries.map((e) => classifyRevenue(e.description)));
                 const cellRevType = types.size > 1 ? 'mixed' : (types.values().next().value || 'mrr');
                 const revColor = REVENUE_TYPE_COLORS[cellRevType as keyof typeof REVENUE_TYPE_COLORS];
                 const revLabel = cellRevType === 'mrr' ? 'REC' : cellRevType === 'one_time' ? 'OT' : 'MIX';
+
+                // Visual indicator: does this cell have linked invoices?
+                const cellHasInvoice = entries.some((e) => invoicedReceivableIds.has(e.id));
+                const allInvoiced = entries.every((e) => invoicedReceivableIds.has(e.id));
 
                 return (
                   <td
                     key={m}
                     onMouseEnter={(e) => showTooltip(entries, m, cid, e)}
                     onMouseLeave={hideTooltip}
+                    onClick={(e) => handleCellClick(entries, m, cid, e)}
                     style={{
                       padding: '4px 6px',
                       textAlign: 'right',
@@ -298,12 +556,25 @@ export default function ReceivablesTable({ receivables, clientNames }: Receivabl
                       fontWeight: 600,
                       color: statusColor,
                       background: bg,
-                      cursor: 'default',
+                      cursor: 'pointer',
                       borderRadius: 0,
                       borderLeft: `2px solid ${revColor}40`,
+                      position: 'relative',
                     }}
                   >
-                    <div>{formatAED(total, 0)}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                      {cellHasInvoice && (
+                        <FileText
+                          size={9}
+                          style={{
+                            color: allInvoiced ? '#00c853' : '#60a5fa',
+                            flexShrink: 0,
+                            opacity: 0.8,
+                          }}
+                        />
+                      )}
+                      <span>{formatAED(total, 0)}</span>
+                    </div>
                     <div style={{
                       fontSize: 7,
                       fontWeight: 700,
@@ -374,8 +645,16 @@ export default function ReceivablesTable({ receivables, clientNames }: Receivabl
           </tr>
         </tfoot>
       </table>
-      {tooltip && (
+      {tooltip && !popover && (
         <CellTooltip data={tooltip} clientName={clientNames[tooltipClientRef.current] || tooltipClientRef.current} />
+      )}
+      {popover && (
+        <CellPopover
+          data={popover}
+          clientName={clientNames[popover.clientId] || popover.clientId}
+          invoiceMap={invoiceMap}
+          onClose={closePopover}
+        />
       )}
     </div>
   );
