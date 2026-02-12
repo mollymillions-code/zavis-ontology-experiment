@@ -14,6 +14,8 @@ import {
   Target,
   Handshake,
   Network,
+  FileText,
+  CreditCard,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -21,6 +23,8 @@ const NAV_ITEMS = [
   { href: '/customers', label: 'Clients', icon: Users },
   { href: '/costs', label: 'Costs', icon: Wallet },
   { href: '/receivables', label: 'Receivables', icon: Calculator },
+  { href: '/invoices', label: 'Invoices', icon: FileText },
+  { href: '/payments', label: 'Payments', icon: CreditCard },
   { href: '/goals', label: 'Sales Goals', icon: Target },
   { href: '/partners', label: 'Partners', icon: Handshake },
   { href: '/trends', label: 'Trends', icon: TrendingUp },
