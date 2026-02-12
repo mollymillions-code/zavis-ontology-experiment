@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { paymentsReceived, invoices } from '@/db/schema';
-import { dbRowToPayment, paymentToDbValues } from '@/db/mappers';
+import { paymentsReceived, invoices, actionLog } from '@/db/schema';
+import { dbRowToPayment, paymentToDbValues, actionLogEntryToDbValues } from '@/db/mappers';
+import { createActionLogEntry } from '@/lib/ontology/action-log';
 import type { PaymentReceived } from '@/lib/models/platform-types';
 
 export async function GET() {
@@ -36,6 +37,19 @@ export async function POST(req: Request) {
     }
     await db.update(invoices).set(updateFields).where(eq(invoices.id, body.invoiceId));
   }
+
+  // Log to ontology audit trail (fire-and-forget)
+  const logEntry = createActionLogEntry('RecordPayment', {
+    paymentId: body.id,
+    paymentNumber: body.paymentNumber,
+    invoiceId: body.invoiceId,
+    amount: body.amount,
+    mode: body.mode,
+  }, [
+    { objectType: 'PaymentReceived', objectId: body.id, operation: 'create' },
+    { objectType: 'Invoice', objectId: body.invoiceId, operation: 'update' },
+  ], 'user');
+  db.insert(actionLog).values(actionLogEntryToDbValues(logEntry)).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

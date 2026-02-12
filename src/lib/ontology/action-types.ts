@@ -95,21 +95,76 @@ export const ProcessChurn: ActionTypeDefinition = {
   ],
 };
 
-// ───────── RecordPayment ─────────
-export const RecordPayment: ActionTypeDefinition = {
-  actionName: 'RecordPayment',
-  description: 'Mark an invoice as paid.',
+// ───────── CreateInvoice ─────────
+export const CreateInvoice: ActionTypeDefinition = {
+  actionName: 'CreateInvoice',
+  description: 'Create a new invoice for a customer with line items.',
   parameters: [
     { name: 'invoiceId', type: 'string', required: true },
-    { name: 'amount', type: 'number', required: true },
-    { name: 'paidDate', type: 'date', required: true },
+    { name: 'invoiceNumber', type: 'string', required: true },
+    { name: 'clientId', type: 'string', required: true },
+    { name: 'total', type: 'number', required: true },
+    { name: 'currency', type: 'string', required: false },
+    { name: 'lineItemCount', type: 'number', required: false },
   ],
   mutations: [
-    { objectType: 'Invoice', operation: 'update', description: 'Set status = paid, paidDate' },
+    { objectType: 'Invoice', operation: 'create', description: 'Create Invoice with line items' },
   ],
   sideEffects: [
     { description: 'Log action to audit trail', trigger: 'always' },
-    { description: 'Update receivables aggregations', trigger: 'always' },
+  ],
+};
+
+// ───────── SendInvoice ─────────
+export const SendInvoice: ActionTypeDefinition = {
+  actionName: 'SendInvoice',
+  description: 'Mark an invoice as sent to the customer.',
+  parameters: [
+    { name: 'invoiceId', type: 'string', required: true },
+    { name: 'invoiceNumber', type: 'string', required: true },
+    { name: 'sentTo', type: 'string', required: false, description: 'Email address' },
+  ],
+  mutations: [
+    { objectType: 'Invoice', operation: 'update', description: 'Set status = sent, sentAt = now' },
+  ],
+  sideEffects: [
+    { description: 'Log action to audit trail', trigger: 'always' },
+  ],
+};
+
+// ───────── RecordPayment ─────────
+export const RecordPayment: ActionTypeDefinition = {
+  actionName: 'RecordPayment',
+  description: 'Record a payment against an invoice. Updates invoice amountPaid and balanceDue.',
+  parameters: [
+    { name: 'paymentId', type: 'string', required: true },
+    { name: 'paymentNumber', type: 'string', required: true },
+    { name: 'invoiceId', type: 'string', required: true },
+    { name: 'amount', type: 'number', required: true },
+    { name: 'mode', type: 'string', required: false },
+  ],
+  mutations: [
+    { objectType: 'PaymentReceived', operation: 'create', description: 'Create payment record' },
+    { objectType: 'Invoice', operation: 'update', description: 'Update amountPaid, balanceDue, status' },
+  ],
+  sideEffects: [
+    { description: 'Log action to audit trail', trigger: 'always' },
+  ],
+};
+
+// ───────── VoidInvoice ─────────
+export const VoidInvoice: ActionTypeDefinition = {
+  actionName: 'VoidInvoice',
+  description: 'Void an invoice. Cannot be undone.',
+  parameters: [
+    { name: 'invoiceId', type: 'string', required: true },
+    { name: 'invoiceNumber', type: 'string', required: true },
+  ],
+  mutations: [
+    { objectType: 'Invoice', operation: 'update', description: 'Set status = void, voidedAt = now' },
+  ],
+  sideEffects: [
+    { description: 'Log action to audit trail', trigger: 'always' },
   ],
 };
 
@@ -151,7 +206,10 @@ export const ACTION_TYPES = {
   SignNewCustomer,
   UpdateCustomerPricing,
   ProcessChurn,
+  CreateInvoice,
+  SendInvoice,
   RecordPayment,
+  VoidInvoice,
   CaptureSnapshot,
   AssignPartner,
 } as const;

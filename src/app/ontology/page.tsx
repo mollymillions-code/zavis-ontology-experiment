@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
 import { useClientStore } from '@/lib/store/customer-store';
 import { useOntologyStore } from '@/lib/store/ontology-store';
+import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { OBJECT_TYPES } from '@/lib/ontology/object-types';
 import { LINK_TYPES } from '@/lib/ontology/link-types';
 import { ACTION_TYPES } from '@/lib/ontology/action-types';
@@ -45,6 +46,11 @@ export default function OntologyPage() {
     customerPartnerLinks,
     actionLog,
   } = useOntologyStore();
+  const { invoices, catalogItems, payments, hydrateFromDb } = useInvoiceStore();
+
+  useEffect(() => {
+    hydrateFromDb();
+  }, [hydrateFromDb]);
 
   const objectTypes = Object.values(OBJECT_TYPES);
   const linkTypes = Object.values(LINK_TYPES);
@@ -56,14 +62,16 @@ export default function OntologyPage() {
     SalesPartner: partners.length,
     Contract: contracts.length,
     RevenueStream: revenueStreams.length,
-    Invoice: 0, // from receivables, not tracked here
+    Invoice: invoices.length,
+    CatalogItem: catalogItems.length,
+    PaymentReceived: payments.length,
     CostEntry: 0,
     Snapshot: 0,
     PricingScenario: 0,
-  }), [clients, partners, contracts, revenueStreams]);
+  }), [clients, partners, contracts, revenueStreams, invoices, catalogItems, payments]);
 
   const totalEntities = Object.values(entityCounts).reduce((a, b) => a + b, 0);
-  const totalLinks = customerPartnerLinks.length + contracts.length + revenueStreams.length;
+  const totalLinks = customerPartnerLinks.length + contracts.length + revenueStreams.length + payments.length;
 
   return (
     <PageShell
