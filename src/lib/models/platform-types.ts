@@ -43,6 +43,16 @@ export const ZAVIS_PLANS: ZavisPlan[] = [
 
 // ========== CLIENT ==========
 
+export interface BillingAddress {
+  attention?: string;
+  street1?: string;
+  street2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip?: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -59,6 +69,12 @@ export interface Client {
   annualRunRate: number;
   onboardingDate: string | null;
   notes?: string;
+  // Billing/invoice fields
+  email?: string | null;
+  phone?: string | null;
+  companyLegalName?: string | null;
+  billingAddress?: BillingAddress | null;
+  defaultTerms?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -235,6 +251,147 @@ export interface ActionLogEntry {
   inputs: Record<string, unknown>;
   mutations: ActionMutationRecord[];
   metadata?: Record<string, unknown>;
+}
+
+// ========== INVOICING ==========
+
+export type InvoiceStatus = 'draft' | 'sent' | 'partially_paid' | 'unpaid' | 'overdue' | 'paid' | 'void';
+
+export type PaymentTerms = 'due_on_receipt' | 'net_14' | 'net_30' | 'net_45' | 'net_60' | 'due_end_of_month' | 'due_end_of_next_month';
+
+export type InvoiceCurrency = 'AED' | 'USD' | 'INR' | 'GBP';
+
+export type PaymentMode = 'bank_transfer' | 'cash' | 'cheque' | 'card' | 'other';
+
+export type PaymentStatus = 'draft' | 'confirmed' | 'void';
+
+export type ItemType = 'service' | 'product';
+
+export const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
+  due_on_receipt: 'Due on Receipt',
+  net_14: 'Net 14',
+  net_30: 'Net 30',
+  net_45: 'Net 45',
+  net_60: 'Net 60',
+  due_end_of_month: 'Due End of Month',
+  due_end_of_next_month: 'Due End of Next Month',
+};
+
+export const PAYMENT_TERMS_DAYS: Record<PaymentTerms, number | null> = {
+  due_on_receipt: 0,
+  net_14: 14,
+  net_30: 30,
+  net_45: 45,
+  net_60: 60,
+  due_end_of_month: null, // calculated dynamically
+  due_end_of_next_month: null,
+};
+
+export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
+  draft: '#9e9e9e',
+  sent: '#2196f3',
+  partially_paid: '#ff9800',
+  unpaid: '#f44336',
+  overdue: '#d32f2f',
+  paid: '#00c853',
+  void: '#757575',
+};
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  partially_paid: 'Partially Paid',
+  unpaid: 'Unpaid',
+  overdue: 'Overdue',
+  paid: 'Paid',
+  void: 'Void',
+};
+
+export const CURRENCY_SYMBOLS: Record<InvoiceCurrency, string> = {
+  AED: 'AED',
+  USD: '$',
+  INR: '₹',
+  GBP: '£',
+};
+
+export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
+  bank_transfer: 'Bank Transfer',
+  cash: 'Cash',
+  cheque: 'Cheque',
+  card: 'Card',
+  other: 'Other',
+};
+
+export interface InvoiceLineItem {
+  id: string;
+  itemId?: string; // FK to catalog_items (optional)
+  description: string;
+  quantity: number;
+  rate: number;
+  discountType: 'percent' | 'flat';
+  discountValue: number;
+  amount: number; // calculated: qty * rate - discount
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  clientId: string;
+  receivableId?: string | null;
+  currency: InvoiceCurrency;
+  status: InvoiceStatus;
+  invoiceDate: string;
+  terms: PaymentTerms;
+  dueDate: string;
+  lineItems: InvoiceLineItem[];
+  subtotal: number;
+  total: number;
+  amountPaid: number;
+  balanceDue: number;
+  customerNotes?: string | null;
+  termsAndConditions?: string | null;
+  sentAt?: string | null;
+  paidAt?: string | null;
+  voidedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  type: ItemType;
+  rate: number;
+  unit: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentReceived {
+  id: string;
+  paymentNumber: string;
+  clientId: string;
+  invoiceId: string;
+  date: string;
+  amount: number;
+  mode: PaymentMode;
+  referenceNumber?: string | null;
+  status: PaymentStatus;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface CompanyConfig {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  logoText: string;
+  defaultNotes: string;
+  bankDetails: string;
 }
 
 // ========== DASHBOARD METRICS ==========

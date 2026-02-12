@@ -1,5 +1,6 @@
 import type {
   Client,
+  BillingAddress,
   ReceivableEntry,
   MonthlySnapshot,
   PricingWhatIf,
@@ -10,6 +11,10 @@ import type {
   CustomerPartnerLink,
   ActionLogEntry,
   ActionMutationRecord,
+  Invoice,
+  InvoiceLineItem,
+  CatalogItem,
+  PaymentReceived,
 } from '@/lib/models/platform-types';
 
 // ===== CLIENTS =====
@@ -31,6 +36,11 @@ export function dbRowToClient(row: Record<string, unknown>): Client {
     annualRunRate: Number(row.annualRunRate) || 0,
     onboardingDate: (row.onboardingDate as string) || null,
     notes: (row.notes as string) || undefined,
+    email: (row.email as string) || null,
+    phone: (row.phone as string) || null,
+    companyLegalName: (row.companyLegalName as string) || null,
+    billingAddress: (row.billingAddress as BillingAddress) || null,
+    defaultTerms: (row.defaultTerms as string) || null,
     createdAt: row.createdAt instanceof Date
       ? (row.createdAt as Date).toISOString()
       : (row.createdAt as string),
@@ -57,6 +67,11 @@ export function clientToDbValues(c: Client) {
     annualRunRate: String(c.annualRunRate),
     onboardingDate: c.onboardingDate,
     notes: c.notes ?? null,
+    email: c.email ?? null,
+    phone: c.phone ?? null,
+    companyLegalName: c.companyLegalName ?? null,
+    billingAddress: c.billingAddress ?? null,
+    defaultTerms: c.defaultTerms ?? null,
     createdAt: new Date(c.createdAt),
     updatedAt: new Date(c.updatedAt),
   };
@@ -322,5 +337,127 @@ export function actionLogEntryToDbValues(e: ActionLogEntry) {
     inputs: e.inputs,
     mutations: e.mutations,
     metadata: e.metadata ?? null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// INVOICING TABLE MAPPERS
+// ═══════════════════════════════════════════════════════════
+
+// ===== INVOICES =====
+
+export function dbRowToInvoice(row: Record<string, unknown>): Invoice {
+  return {
+    id: row.id as string,
+    invoiceNumber: row.invoiceNumber as string,
+    clientId: row.clientId as string,
+    receivableId: (row.receivableId as string) || null,
+    currency: (row.currency as Invoice['currency']) || 'AED',
+    status: row.status as Invoice['status'],
+    invoiceDate: row.invoiceDate as string,
+    terms: row.terms as Invoice['terms'],
+    dueDate: row.dueDate as string,
+    lineItems: (row.lineItems as InvoiceLineItem[]) || [],
+    subtotal: Number(row.subtotal) || 0,
+    total: Number(row.total) || 0,
+    amountPaid: Number(row.amountPaid) || 0,
+    balanceDue: Number(row.balanceDue) || 0,
+    customerNotes: (row.customerNotes as string) || null,
+    termsAndConditions: (row.termsAndConditions as string) || null,
+    sentAt: row.sentAt instanceof Date ? (row.sentAt as Date).toISOString() : (row.sentAt as string) || null,
+    paidAt: row.paidAt instanceof Date ? (row.paidAt as Date).toISOString() : (row.paidAt as string) || null,
+    voidedAt: row.voidedAt instanceof Date ? (row.voidedAt as Date).toISOString() : (row.voidedAt as string) || null,
+    createdAt: row.createdAt instanceof Date ? (row.createdAt as Date).toISOString() : (row.createdAt as string),
+    updatedAt: row.updatedAt instanceof Date ? (row.updatedAt as Date).toISOString() : (row.updatedAt as string),
+  };
+}
+
+export function invoiceToDbValues(inv: Invoice) {
+  return {
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    clientId: inv.clientId,
+    receivableId: inv.receivableId ?? null,
+    currency: inv.currency,
+    status: inv.status,
+    invoiceDate: inv.invoiceDate,
+    terms: inv.terms,
+    dueDate: inv.dueDate,
+    lineItems: inv.lineItems,
+    subtotal: String(inv.subtotal),
+    total: String(inv.total),
+    amountPaid: String(inv.amountPaid),
+    balanceDue: String(inv.balanceDue),
+    customerNotes: inv.customerNotes ?? null,
+    termsAndConditions: inv.termsAndConditions ?? null,
+    sentAt: inv.sentAt ? new Date(inv.sentAt) : null,
+    paidAt: inv.paidAt ? new Date(inv.paidAt) : null,
+    voidedAt: inv.voidedAt ? new Date(inv.voidedAt) : null,
+    createdAt: new Date(inv.createdAt),
+    updatedAt: new Date(inv.updatedAt),
+  };
+}
+
+// ===== CATALOG ITEMS =====
+
+export function dbRowToCatalogItem(row: Record<string, unknown>): CatalogItem {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    description: (row.description as string) || null,
+    type: (row.type as CatalogItem['type']) || 'service',
+    rate: Number(row.rate) || 0,
+    unit: (row.unit as string) || 'month',
+    isActive: row.isActive as boolean,
+    createdAt: row.createdAt instanceof Date ? (row.createdAt as Date).toISOString() : (row.createdAt as string),
+    updatedAt: row.updatedAt instanceof Date ? (row.updatedAt as Date).toISOString() : (row.updatedAt as string),
+  };
+}
+
+export function catalogItemToDbValues(item: CatalogItem) {
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description ?? null,
+    type: item.type,
+    rate: String(item.rate),
+    unit: item.unit,
+    isActive: item.isActive,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
+  };
+}
+
+// ===== PAYMENTS RECEIVED =====
+
+export function dbRowToPayment(row: Record<string, unknown>): PaymentReceived {
+  return {
+    id: row.id as string,
+    paymentNumber: row.paymentNumber as string,
+    clientId: row.clientId as string,
+    invoiceId: row.invoiceId as string,
+    date: row.date as string,
+    amount: Number(row.amount) || 0,
+    mode: (row.mode as PaymentReceived['mode']) || 'bank_transfer',
+    referenceNumber: (row.referenceNumber as string) || null,
+    status: (row.status as PaymentReceived['status']) || 'confirmed',
+    notes: (row.notes as string) || null,
+    createdAt: row.createdAt instanceof Date ? (row.createdAt as Date).toISOString() : (row.createdAt as string),
+  };
+}
+
+export function paymentToDbValues(p: PaymentReceived) {
+  return {
+    id: p.id,
+    paymentNumber: p.paymentNumber,
+    clientId: p.clientId,
+    invoiceId: p.invoiceId,
+    date: p.date,
+    amount: String(p.amount),
+    mode: p.mode,
+    referenceNumber: p.referenceNumber ?? null,
+    status: p.status,
+    notes: p.notes ?? null,
+    createdAt: new Date(p.createdAt),
   };
 }

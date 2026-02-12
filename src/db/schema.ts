@@ -17,6 +17,12 @@ export const clients = pgTable('clients', {
   annualRunRate: numeric('annual_run_rate', { precision: 10, scale: 2 }).notNull().default('0'),
   onboardingDate: text('onboarding_date'),
   notes: text('notes'),
+  // Billing/invoice fields
+  email: text('email'),
+  phone: text('phone'),
+  companyLegalName: text('company_legal_name'),
+  billingAddress: jsonb('billing_address'), // { attention, street1, street2, city, state, country, zip }
+  defaultTerms: text('default_terms'), // PaymentTerms for this client
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -132,4 +138,67 @@ export const documents = pgTable('documents', {
   documentType: text('document_type').notNull().default('contract'), // 'contract' | 'agreement' | 'other'
   extractionData: jsonb('extraction_data'), // LLM extraction result (if extracted)
   uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ═══════════════════════════════════════════════════════════
+// INVOICING TABLES
+// ═══════════════════════════════════════════════════════════
+
+// ===== INVOICES =====
+export const invoices = pgTable('invoices', {
+  id: text('id').primaryKey(),
+  invoiceNumber: text('invoice_number').notNull().unique(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
+  receivableId: text('receivable_id'), // optional link to receivable
+  currency: text('currency').notNull().default('AED'),
+  status: text('status').notNull().default('draft'), // draft/sent/partially_paid/unpaid/overdue/paid/void
+  invoiceDate: text('invoice_date').notNull(),
+  terms: text('terms').notNull().default('net_30'),
+  dueDate: text('due_date').notNull(),
+  lineItems: jsonb('line_items').notNull(), // InvoiceLineItem[]
+  subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
+  total: numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),
+  amountPaid: numeric('amount_paid', { precision: 10, scale: 2 }).notNull().default('0'),
+  balanceDue: numeric('balance_due', { precision: 10, scale: 2 }).notNull().default('0'),
+  customerNotes: text('customer_notes'),
+  termsAndConditions: text('terms_and_conditions'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== CATALOG ITEMS =====
+export const catalogItems = pgTable('catalog_items', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: text('type').notNull().default('service'), // service/product
+  rate: numeric('rate', { precision: 10, scale: 2 }).notNull(),
+  unit: text('unit').notNull().default('month'), // seat, month, project, etc
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== PAYMENTS RECEIVED =====
+export const paymentsReceived = pgTable('payments_received', {
+  id: text('id').primaryKey(),
+  paymentNumber: text('payment_number').notNull().unique(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
+  invoiceId: text('invoice_id').notNull().references(() => invoices.id, { onDelete: 'restrict' }),
+  date: text('date').notNull(),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  mode: text('mode').notNull().default('bank_transfer'), // bank_transfer/cash/cheque/card/other
+  referenceNumber: text('reference_number'),
+  status: text('status').notNull().default('confirmed'), // draft/confirmed/void
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== SEQUENCES (auto-increment for invoice/payment numbers) =====
+export const sequences = pgTable('sequences', {
+  name: text('name').primaryKey(), // 'invoice' or 'payment'
+  currentValue: integer('current_value').notNull().default(0),
 });

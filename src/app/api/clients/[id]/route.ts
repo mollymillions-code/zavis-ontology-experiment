@@ -28,6 +28,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.annualRunRate !== undefined) updateFields.annualRunRate = values.annualRunRate;
   if (body.onboardingDate !== undefined) updateFields.onboardingDate = values.onboardingDate;
   if (body.notes !== undefined) updateFields.notes = values.notes;
+  if (body.email !== undefined) updateFields.email = values.email;
+  if (body.phone !== undefined) updateFields.phone = values.phone;
+  if (body.companyLegalName !== undefined) updateFields.companyLegalName = values.companyLegalName;
+  if (body.billingAddress !== undefined) updateFields.billingAddress = values.billingAddress;
+  if (body.defaultTerms !== undefined) updateFields.defaultTerms = values.defaultTerms;
 
   await db.update(clients).set(updateFields).where(eq(clients.id, params.id));
   return NextResponse.json({ ok: true });
