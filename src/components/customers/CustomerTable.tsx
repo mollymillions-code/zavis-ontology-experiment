@@ -88,7 +88,24 @@ export default function ClientTable({ clients, onEdit, onDelete }: ClientTablePr
                 color: '#1a1a1a',
                 fontFamily: "'DM Sans', sans-serif",
               }}>
-                {client.name}
+                <button
+                  onClick={() => onEdit(client)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    textDecorationColor: '#e0dbd2',
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  {client.name}
+                </button>
               </td>
               <td style={{ padding: '10px 12px' }}>
                 <PartnerBadge partner={client.salesPartner} />

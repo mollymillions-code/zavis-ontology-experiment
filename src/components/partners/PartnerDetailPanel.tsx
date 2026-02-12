@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import type { SalesPartnerInfo } from '@/lib/config/sales-partners';
 import PartnerForm from './PartnerForm';
 import PartnerContractUploadFlow from './PartnerContractUploadFlow';
+import PartnerContractUpdateFlow from './PartnerContractUpdateFlow';
 import DocumentsFolder from '@/components/shared/DocumentsFolder';
 
 interface PartnerDetailPanelProps {
@@ -107,86 +108,96 @@ export default function PartnerDetailPanel({ partner, open, onClose, onSave }: P
           </div>
 
           {/* Content */}
-          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {isEdit ? (
-              /* Edit mode — form + documents */
-              <>
+          <div style={{ padding: 24 }}>
+            <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+              <Tabs.List
+                style={{
+                  display: 'flex',
+                  gap: 0,
+                  marginBottom: 20,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  border: '1px solid #e0dbd2',
+                }}
+              >
+                <Tabs.Trigger
+                  value="manual"
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: activeTab === 'manual' ? '#1a1a1a' : '#ffffff',
+                    color: activeTab === 'manual' ? '#ffffff' : '#666',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isEdit ? 'Edit Details' : 'Manual Entry'}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="upload"
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    border: 'none',
+                    borderLeft: '1px solid #e0dbd2',
+                    background: activeTab === 'upload' ? '#1a1a1a' : '#ffffff',
+                    color: activeTab === 'upload' ? '#ffffff' : '#666',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isEdit ? 'Update Agreement' : 'Upload Agreement'}
+                </Tabs.Trigger>
+                {isEdit && (
+                  <Tabs.Trigger
+                    value="documents"
+                    style={{
+                      flex: 1,
+                      padding: '10px 16px',
+                      border: 'none',
+                      borderLeft: '1px solid #e0dbd2',
+                      background: activeTab === 'documents' ? '#1a1a1a' : '#ffffff',
+                      color: activeTab === 'documents' ? '#ffffff' : '#666',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif",
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    Documents
+                  </Tabs.Trigger>
+                )}
+              </Tabs.List>
+
+              <Tabs.Content value="manual">
                 <PartnerForm
-                  partner={partner}
+                  partner={isEdit ? partner : formPartner}
                   onSave={(p) => {
                     onSave(p);
                     handleClose();
                   }}
                   onCancel={handleClose}
                 />
-                <DocumentsFolder
-                  entityType="partner"
-                  entityId={partner.id}
-                  entityName={partner.name}
-                />
-              </>
-            ) : (
-              /* Add mode — tabs */
-              <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-                <Tabs.List
-                  style={{
-                    display: 'flex',
-                    gap: 0,
-                    marginBottom: 20,
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    border: '1px solid #e0dbd2',
-                  }}
-                >
-                  <Tabs.Trigger
-                    value="manual"
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      border: 'none',
-                      background: activeTab === 'manual' ? '#1a1a1a' : '#ffffff',
-                      color: activeTab === 'manual' ? '#ffffff' : '#666',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontFamily: "'DM Sans', sans-serif",
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    Manual Entry
-                  </Tabs.Trigger>
-                  <Tabs.Trigger
-                    value="upload"
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      border: 'none',
-                      borderLeft: '1px solid #e0dbd2',
-                      background: activeTab === 'upload' ? '#1a1a1a' : '#ffffff',
-                      color: activeTab === 'upload' ? '#ffffff' : '#666',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontFamily: "'DM Sans', sans-serif",
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    Upload Agreement
-                  </Tabs.Trigger>
-                </Tabs.List>
+              </Tabs.Content>
 
-                <Tabs.Content value="manual">
-                  <PartnerForm
-                    partner={formPartner}
-                    onSave={(p) => {
+              <Tabs.Content value="upload">
+                {isEdit && partner ? (
+                  <PartnerContractUpdateFlow
+                    partner={partner}
+                    onUpdatePartner={(p) => {
                       onSave(p);
                       handleClose();
                     }}
-                    onCancel={handleClose}
                   />
-                </Tabs.Content>
-
-                <Tabs.Content value="upload">
+                ) : (
                   <PartnerContractUploadFlow
                     onCreatePartner={(p) => {
                       onSave(p);
@@ -194,9 +205,19 @@ export default function PartnerDetailPanel({ partner, open, onClose, onSave }: P
                     }}
                     onSwitchToManual={handleSwitchToManual}
                   />
+                )}
+              </Tabs.Content>
+
+              {isEdit && (
+                <Tabs.Content value="documents">
+                  <DocumentsFolder
+                    entityType="partner"
+                    entityId={partner.id}
+                    entityName={partner.name}
+                  />
                 </Tabs.Content>
-              </Tabs.Root>
-            )}
+              )}
+            </Tabs.Root>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
