@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
 import ReceivablesTable from '@/components/receivables/ReceivablesTable';
 import { useClientStore } from '@/lib/store/customer-store';
+import { useInvoiceStore } from '@/lib/store/invoice-store';
 import type { ReceivableStatus } from '@/lib/models/platform-types';
 import { formatAED } from '@/lib/utils/currency';
 import {
@@ -18,7 +19,10 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 export default function ReceivablesPage() {
   const clients = useClientStore((s) => s.clients);
   const receivables = useClientStore((s) => s.receivables);
+  const { invoices, hydrateFromDb } = useInvoiceStore();
   const [statusFilter, setStatusFilter] = useState<ReceivableStatus | 'all'>('all');
+
+  useEffect(() => { hydrateFromDb(); }, [hydrateFromDb]);
   const [revenueFilter, setRevenueFilter] = useState<RevenueType | 'all'>('all');
 
   const clientNames = useMemo(() => {
@@ -214,7 +218,7 @@ export default function ReceivablesPage() {
       </div>
 
       {/* Receivables Table */}
-      <ReceivablesTable receivables={filtered} clientNames={clientNames} />
+      <ReceivablesTable receivables={filtered} clientNames={clientNames} invoices={invoices} />
     </PageShell>
   );
 }
