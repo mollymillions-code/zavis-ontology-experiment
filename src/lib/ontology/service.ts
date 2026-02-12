@@ -10,7 +10,7 @@ import {
   revenueStreams,
   customerPartnerLinks,
   actionLog,
-  receivables,
+  invoices,
 } from '@/db/schema';
 import {
   dbRowToPartner,
@@ -339,11 +339,32 @@ export async function executeAction(
       }
 
       case 'RecordPayment': {
+        // Payments are primarily handled by /api/payments POST route (which logs its own action).
+        // This case handles legacy calls through the ontology service.
         const invoiceId = inputs.invoiceId as string;
-        await db.update(receivables)
-          .set({ status: 'paid' })
-          .where(eq(receivables.id, invoiceId));
-        mutations.push({ objectType: 'Invoice', objectId: invoiceId, operation: 'update', after: { status: 'paid' } });
+        const amount = Number(inputs.amount ?? 0);
+        const invRows = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+        if (invRows.length > 0) {
+          const inv = invRows[0];
+          const currentPaid = Number(inv.amountPaid) || 0;
+          const total = Number(inv.total) || 0;
+          const newPaid = currentPaid + amount;
+          const newBalance = Math.max(0, total - newPaid);
+          const newStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partially_paid' : String(inv.status);
+          await db.update(invoices)
+            .set({ amountPaid: String(newPaid), balanceDue: String(newBalance), status: newStatus, updatedAt: new Date() })
+            .where(eq(invoices.id, invoiceId));
+          mutations.push({ objectType: 'Invoice', objectId: invoiceId, operation: 'update', after: { status: newStatus, amountPaid: newPaid } });
+        }
+        break;
+      }
+
+      // Invoice actions are logged by their respective API routes (fire-and-forget).
+      // These cases exist so executeAction() doesn't throw on the new action types.
+      case 'CreateInvoice':
+      case 'SendInvoice':
+      case 'VoidInvoice': {
+        mutations.push({ objectType: 'Invoice', objectId: inputs.invoiceId as string, operation: inputs.invoiceId ? 'update' : 'create' });
         break;
       }
 

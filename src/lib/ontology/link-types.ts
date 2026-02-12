@@ -72,16 +72,31 @@ export const ContractGeneratesRevenue: LinkTypeDefinition = {
 // Customer → Invoice (one-to-many)
 export const CustomerOwesInvoice: LinkTypeDefinition = {
   linkName: 'CustomerOwesInvoice',
-  description: 'Links a Customer to their Invoices/Receivables.',
+  description: 'Links a Customer to their Invoices.',
   sourceObjectType: 'Customer',
   targetObjectType: 'Invoice',
   cardinality: 'one-to-many',
   storage: {
     kind: 'fk',
-    table: 'receivables',
+    table: 'invoices',
     column: 'client_id',
   },
-  replaces: 'receivables.client_id FK (same, now explicitly typed)',
+  replaces: 'receivables.client_id FK → invoices.client_id FK',
+};
+
+// ───────── InvoiceHasPayment ─────────
+// Invoice → PaymentReceived (one-to-many)
+export const InvoiceHasPayment: LinkTypeDefinition = {
+  linkName: 'InvoiceHasPayment',
+  description: 'Links an Invoice to its PaymentReceived records. Payments reduce balanceDue.',
+  sourceObjectType: 'Invoice',
+  targetObjectType: 'PaymentReceived',
+  cardinality: 'one-to-many',
+  storage: {
+    kind: 'fk',
+    table: 'payments_received',
+    column: 'invoice_id',
+  },
 };
 
 // ───────── PartnerEarnsCommission ─────────
@@ -105,6 +120,7 @@ export const LINK_TYPES = {
   CustomerHasContract,
   ContractGeneratesRevenue,
   CustomerOwesInvoice,
+  InvoiceHasPayment,
   PartnerEarnsCommission,
 } as const;
 

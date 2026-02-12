@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { invoices } from '@/db/schema';
-import { dbRowToInvoice } from '@/db/mappers';
+import { invoices, actionLog } from '@/db/schema';
+import { dbRowToInvoice, actionLogEntryToDbValues } from '@/db/mappers';
+import { createActionLogEntry } from '@/lib/ontology/action-log';
 import type { Invoice } from '@/lib/models/platform-types';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
@@ -38,7 +39,22 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   // Return the updated invoice
   const rows = await db.select().from(invoices).where(eq(invoices.id, params.id));
   if (rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(dbRowToInvoice(rows[0] as Record<string, unknown>));
+  const updated = dbRowToInvoice(rows[0] as Record<string, unknown>);
+
+  // Log status-change business events to ontology audit trail
+  if (body.status === 'sent') {
+    const logEntry = createActionLogEntry('SendInvoice', {
+      invoiceId: params.id, invoiceNumber: updated.invoiceNumber,
+    }, [{ objectType: 'Invoice', objectId: params.id, operation: 'update', after: { status: 'sent' } }], 'user');
+    db.insert(actionLog).values(actionLogEntryToDbValues(logEntry)).catch(() => {});
+  } else if (body.status === 'void') {
+    const logEntry = createActionLogEntry('VoidInvoice', {
+      invoiceId: params.id, invoiceNumber: updated.invoiceNumber,
+    }, [{ objectType: 'Invoice', objectId: params.id, operation: 'update', after: { status: 'void' } }], 'user');
+    db.insert(actionLog).values(actionLogEntryToDbValues(logEntry)).catch(() => {});
+  }
+
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
