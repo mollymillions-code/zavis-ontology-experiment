@@ -33,6 +33,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.paidAt !== undefined) updateFields.paidAt = body.paidAt ? new Date(body.paidAt) : null;
   if (body.voidedAt !== undefined) updateFields.voidedAt = body.voidedAt ? new Date(body.voidedAt) : null;
   if (body.receivableId !== undefined) updateFields.receivableId = body.receivableId;
+  if (body.contractId !== undefined) updateFields.contractId = body.contractId;
 
   await db.update(invoices).set(updateFields).where(eq(invoices.id, params.id));
 

@@ -13,6 +13,7 @@ import type {
 import { PAYMENT_TERMS_LABELS, CURRENCY_SYMBOLS } from '@/lib/models/platform-types';
 import { useClientStore } from '@/lib/store/customer-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
+import { useOntologyStore } from '@/lib/store/ontology-store';
 import { calculateDueDate, calculateInvoiceTotals, billingCycleToTerms } from '@/lib/utils/invoice-utils';
 import CustomerSelector from './CustomerSelector';
 import LineItemsTable from './LineItemsTable';
@@ -35,6 +36,7 @@ export default function InvoiceForm({
   const router = useRouter();
   const clients = useClientStore((s) => s.clients);
   const { catalogItems, addInvoice, updateInvoice, getNextNumber, companyConfig } = useInvoiceStore();
+  const { getCustomerContracts, getContractRevenueStreams } = useOntologyStore();
 
   const isEdit = !!invoice;
 
@@ -57,6 +59,7 @@ export default function InvoiceForm({
     invoice?.termsAndConditions || companyConfig.bankDetails
   );
   const [receivableId] = useState(invoice?.receivableId || prefillReceivableId || null);
+  const [contractId, setContractId] = useState<string | null>(invoice?.contractId || null);
 
   // Auto-generate invoice number
   useEffect(() => {
@@ -72,13 +75,44 @@ export default function InvoiceForm({
     }
   }, [invoiceDate, terms]);
 
-  // Auto-set terms when customer is selected
+  // Auto-set terms + resolve contract + pre-populate line items from revenue streams
   function handleClientSelect(client: Client) {
     setClientId(client.id);
     if (client.defaultTerms) {
       setTerms(client.defaultTerms as PaymentTerms);
     } else if (client.billingCycle) {
       setTerms(billingCycleToTerms(client.billingCycle));
+    }
+
+    // Auto-resolve active contract and pre-populate line items from revenue streams
+    const customerContracts = getCustomerContracts(client.id);
+    const activeContract = customerContracts.find((c) => c.status === 'active') || customerContracts[0];
+    if (activeContract) {
+      setContractId(activeContract.id);
+
+      // Only auto-populate if no prefilled items and no existing items
+      if (!prefillLineItems && lineItems.length === 0) {
+        const streams = getContractRevenueStreams(activeContract.id);
+        if (streams.length > 0) {
+          const autoItems: InvoiceLineItem[] = streams
+            .filter((s) => s.type !== 'one_time') // skip one-time for recurring invoices
+            .map((s) => ({
+              id: `li-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              revenueStreamId: s.id,
+              description: `${s.type === 'subscription' ? 'Subscription' : s.type === 'add_on' ? 'Add-on' : s.type === 'managed_service' ? 'Managed Service' : s.type} — ${s.frequency}`,
+              quantity: 1,
+              rate: s.amount,
+              discountType: 'percent' as const,
+              discountValue: 0,
+              amount: s.amount,
+            }));
+          if (autoItems.length > 0) {
+            setLineItems(autoItems);
+          }
+        }
+      }
+    } else {
+      setContractId(null);
     }
   }
 
@@ -104,6 +138,7 @@ export default function InvoiceForm({
           terms,
           dueDate,
           currency,
+          contractId,
           status: markAsSent ? 'sent' : invoice.status,
           sentAt: markAsSent ? now : invoice.sentAt,
         });
@@ -112,6 +147,7 @@ export default function InvoiceForm({
           id: `inv-${Date.now()}`,
           invoiceNumber,
           clientId,
+          contractId,
           receivableId,
           currency,
           status,

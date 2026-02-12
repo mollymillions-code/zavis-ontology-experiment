@@ -163,7 +163,7 @@ export const ContractObjectType: ObjectTypeDefinition = {
       expression: "SUM(linked:ContractGeneratesRevenue.amount WHERE frequency='one_time')",
     },
   ],
-  outgoingLinks: ['ContractGeneratesRevenue'],
+  outgoingLinks: ['ContractGeneratesRevenue', 'ContractBilledByInvoice'],
 };
 
 // ───────── REVENUE STREAM ─────────
@@ -198,6 +198,7 @@ export const InvoiceObjectType: ObjectTypeDefinition = {
     { name: 'id', type: 'string' },
     { name: 'invoiceNumber', type: 'string', description: 'INV-000XXX' },
     { name: 'clientId', type: 'string', description: 'FK to Customer' },
+    { name: 'contractId', type: 'string', nullable: true, description: 'FK to Contract — source contract for this invoice' },
     { name: 'receivableId', type: 'string', nullable: true, description: 'Link to legacy receivable' },
     { name: 'currency', type: 'string', description: 'AED | USD | INR | GBP' },
     { name: 'status', type: 'string', description: 'draft | sent | partially_paid | unpaid | overdue | paid | void' },

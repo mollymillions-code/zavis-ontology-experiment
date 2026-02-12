@@ -68,6 +68,21 @@ export const ContractGeneratesRevenue: LinkTypeDefinition = {
   replaces: 'clients.mrr + clients.one_time_revenue embedded fields',
 };
 
+// ───────── ContractBilledByInvoice ─────────
+// Contract → Invoice (one-to-many)
+export const ContractBilledByInvoice: LinkTypeDefinition = {
+  linkName: 'ContractBilledByInvoice',
+  description: 'Links a Contract to Invoices generated from it. Closes the contract-to-cash loop.',
+  sourceObjectType: 'Contract',
+  targetObjectType: 'Invoice',
+  cardinality: 'one-to-many',
+  storage: {
+    kind: 'fk',
+    table: 'invoices',
+    column: 'contract_id',
+  },
+};
+
 // ───────── CustomerOwesInvoice ─────────
 // Customer → Invoice (one-to-many)
 export const CustomerOwesInvoice: LinkTypeDefinition = {
@@ -119,6 +134,7 @@ export const LINK_TYPES = {
   CustomerRepresentedBy,
   CustomerHasContract,
   ContractGeneratesRevenue,
+  ContractBilledByInvoice,
   CustomerOwesInvoice,
   InvoiceHasPayment,
   PartnerEarnsCommission,

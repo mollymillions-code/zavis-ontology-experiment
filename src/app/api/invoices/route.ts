@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     invoiceId: body.id,
     invoiceNumber: body.invoiceNumber,
     clientId: body.clientId,
+    contractId: body.contractId || null,
     total: body.total,
     currency: body.currency,
     lineItemCount: body.lineItems.length,

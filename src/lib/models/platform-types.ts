@@ -325,6 +325,7 @@ export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
 export interface InvoiceLineItem {
   id: string;
   itemId?: string; // FK to catalog_items (optional)
+  revenueStreamId?: string; // FK to revenue_streams — links line item to the stream it bills for
   description: string;
   quantity: number;
   rate: number;
@@ -337,6 +338,7 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   clientId: string;
+  contractId?: string | null; // FK to contract — links invoice to the source contract
   receivableId?: string | null;
   currency: InvoiceCurrency;
   status: InvoiceStatus;
