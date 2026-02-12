@@ -149,6 +149,7 @@ export const invoices = pgTable('invoices', {
   id: text('id').primaryKey(),
   invoiceNumber: text('invoice_number').notNull().unique(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
+  contractId: text('contract_id'), // optional link to source contract
   receivableId: text('receivable_id'), // optional link to receivable
   currency: text('currency').notNull().default('AED'),
   status: text('status').notNull().default('draft'), // draft/sent/partially_paid/unpaid/overdue/paid/void
