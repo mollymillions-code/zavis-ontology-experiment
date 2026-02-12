@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { FileText, Download, Trash2, Loader2, FolderOpen } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { FileText, Download, Trash2, Loader2, FolderOpen, Upload } from 'lucide-react';
 
 interface DocumentRecord {
   id: string;
@@ -26,7 +26,9 @@ interface DocumentsFolderProps {
 export default function DocumentsFolder({ entityType, entityId, entityName }: DocumentsFolderProps) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -71,6 +73,28 @@ export default function DocumentsFolder({ entityType, entityId, entityName }: Do
     }
   }
 
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('entityType', entityType);
+      formData.append('entityId', entityId);
+      formData.append('documentType', 'contract');
+      const res = await fetch('/api/documents', { method: 'POST', body: formData });
+      if (res.ok) {
+        await fetchDocuments();
+      }
+    } catch {
+      console.error('Failed to upload document');
+    } finally {
+      setUploading(false);
+      if (uploadRef.current) uploadRef.current.value = '';
+    }
+  }
+
   function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -110,6 +134,34 @@ export default function DocumentsFolder({ entityType, entityId, entityName }: Do
         }}>
           {entityName}
         </span>
+        <input
+          ref={uploadRef}
+          type="file"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+          onChange={handleUpload}
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={() => uploadRef.current?.click()}
+          disabled={uploading}
+          style={{
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e0dbd2',
+            background: '#ffffff',
+            color: uploading ? '#999' : '#00c853',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: uploading ? 'default' : 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+          {uploading ? 'Uploading...' : 'Upload'}
+        </button>
       </div>
 
       {loading ? (

@@ -8,6 +8,7 @@ import type { Client } from '@/lib/models/platform-types';
 import type { ContractExtraction } from '@/lib/schemas/contract-extraction';
 import ClientForm from './CustomerForm';
 import ContractUploadFlow from './ContractUploadFlow';
+import ContractUpdateFlow from './ContractUpdateFlow';
 import DocumentsFolder from '@/components/shared/DocumentsFolder';
 import { useWhatIfStore } from '@/lib/store/whatif-store';
 import { useRouter } from 'next/navigation';
@@ -149,87 +150,96 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
 
           {/* Content */}
           <div style={{ padding: 24 }}>
-            {isEdit ? (
-              /* Edit mode — form + documents folder */
-              <>
+            <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+              <Tabs.List
+                style={{
+                  display: 'flex',
+                  gap: 0,
+                  marginBottom: 20,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  border: '1px solid #e0dbd2',
+                }}
+              >
+                <Tabs.Trigger
+                  value="manual"
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: activeTab === 'manual' ? '#1a1a1a' : '#ffffff',
+                    color: activeTab === 'manual' ? '#ffffff' : '#666',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isEdit ? 'Edit Details' : 'Manual Entry'}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="upload"
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    border: 'none',
+                    borderLeft: '1px solid #e0dbd2',
+                    background: activeTab === 'upload' ? '#1a1a1a' : '#ffffff',
+                    color: activeTab === 'upload' ? '#ffffff' : '#666',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isEdit ? 'Update Contract' : 'Upload Contract'}
+                </Tabs.Trigger>
+                {isEdit && (
+                  <Tabs.Trigger
+                    value="documents"
+                    style={{
+                      flex: 1,
+                      padding: '10px 16px',
+                      border: 'none',
+                      borderLeft: '1px solid #e0dbd2',
+                      background: activeTab === 'documents' ? '#1a1a1a' : '#ffffff',
+                      color: activeTab === 'documents' ? '#ffffff' : '#666',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif",
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    Documents
+                  </Tabs.Trigger>
+                )}
+              </Tabs.List>
+
+              <Tabs.Content value="manual">
                 <ClientForm
-                  client={client}
+                  client={isEdit ? client : formClient}
                   onSave={(c) => {
                     onSave(c);
                     handleClose();
                   }}
                   onCancel={handleClose}
                 />
-                <div style={{ marginTop: 20 }}>
-                  <DocumentsFolder
-                    entityType="client"
-                    entityId={client.id}
-                    entityName={client.name}
-                  />
-                </div>
-              </>
-            ) : (
-              /* Add mode — tabs for Manual Entry vs Upload Contract */
-              <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-                <Tabs.List
-                  style={{
-                    display: 'flex',
-                    gap: 0,
-                    marginBottom: 20,
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    border: '1px solid #e0dbd2',
-                  }}
-                >
-                  <Tabs.Trigger
-                    value="manual"
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      border: 'none',
-                      background: activeTab === 'manual' ? '#1a1a1a' : '#ffffff',
-                      color: activeTab === 'manual' ? '#ffffff' : '#666',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontFamily: "'DM Sans', sans-serif",
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    Manual Entry
-                  </Tabs.Trigger>
-                  <Tabs.Trigger
-                    value="upload"
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      border: 'none',
-                      borderLeft: '1px solid #e0dbd2',
-                      background: activeTab === 'upload' ? '#1a1a1a' : '#ffffff',
-                      color: activeTab === 'upload' ? '#ffffff' : '#666',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontFamily: "'DM Sans', sans-serif",
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    Upload Contract
-                  </Tabs.Trigger>
-                </Tabs.List>
+              </Tabs.Content>
 
-                <Tabs.Content value="manual">
-                  <ClientForm
-                    client={formClient}
-                    onSave={(c) => {
+              <Tabs.Content value="upload">
+                {isEdit && client ? (
+                  <ContractUpdateFlow
+                    client={client}
+                    onUpdateClient={(c) => {
                       onSave(c);
                       handleClose();
                     }}
-                    onCancel={handleClose}
+                    onSendToLab={handleSendToLab}
                   />
-                </Tabs.Content>
-
-                <Tabs.Content value="upload">
+                ) : (
                   <ContractUploadFlow
                     onCreateClient={(c) => {
                       onSave(c);
@@ -238,9 +248,19 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
                     onSwitchToManual={handleSwitchToManual}
                     onSendToLab={handleSendToLab}
                   />
+                )}
+              </Tabs.Content>
+
+              {isEdit && (
+                <Tabs.Content value="documents">
+                  <DocumentsFolder
+                    entityType="client"
+                    entityId={client.id}
+                    entityName={client.name}
+                  />
                 </Tabs.Content>
-              </Tabs.Root>
-            )}
+              )}
+            </Tabs.Root>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
