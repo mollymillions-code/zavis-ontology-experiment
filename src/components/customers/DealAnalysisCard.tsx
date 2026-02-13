@@ -28,7 +28,12 @@ const PREDICTABILITY_COLORS: Record<string, string> = {
 };
 
 export default function DealAnalysisCard({ analysis }: DealAnalysisCardProps) {
-  const { comparisonToStandard, risks, revenueQuality, recommendations } = analysis;
+  if (!analysis) return null;
+
+  const { comparisonToStandard, risks = [], revenueQuality, recommendations = [] } = analysis;
+
+  if (!comparisonToStandard) return null;
+
   const verdict = VERDICT_LABELS[comparisonToStandard.verdict] || VERDICT_LABELS.at_standard;
 
   const standardBarWidth = 100;
@@ -56,7 +61,7 @@ export default function DealAnalysisCard({ analysis }: DealAnalysisCardProps) {
       </div>
 
       {/* Confidence Indicator */}
-      {analysis.extractionConfidence < 0.7 && (
+      {analysis.extractionConfidence != null && analysis.extractionConfidence < 0.7 && (
         <div style={{
           padding: 12, borderRadius: 8,
           background: '#fff8e1', border: '1px solid #ffe082',
@@ -67,7 +72,7 @@ export default function DealAnalysisCard({ analysis }: DealAnalysisCardProps) {
             <span style={{ fontSize: 11, fontWeight: 700, color: '#f57f17', fontFamily: "'DM Sans', sans-serif" }}>
               Low Confidence ({(analysis.extractionConfidence * 100).toFixed(0)}%)
             </span>
-            {analysis.ambiguities.length > 0 && (
+            {analysis.ambiguities?.length > 0 && (
               <ul style={{ margin: '4px 0 0 0', paddingLeft: 16 }}>
                 {analysis.ambiguities.map((a, i) => (
                   <li key={i} style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif" }}>{a}</li>
@@ -167,37 +172,39 @@ export default function DealAnalysisCard({ analysis }: DealAnalysisCardProps) {
       )}
 
       {/* Revenue Quality */}
-      <div style={{
-        padding: 16, borderRadius: 10,
-        background: '#ffffff', border: '1px solid #e0dbd2',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif" }}>
-            Revenue Quality
-          </span>
-          <span style={{
-            fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-            color: PREDICTABILITY_COLORS[revenueQuality.predictabilityScore] || '#666',
-            fontFamily: "'Space Mono', monospace",
-          }}>
-            {revenueQuality.predictabilityScore}
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-          <div style={{ flex: 1, height: 6, background: '#e0dbd2', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              width: `${revenueQuality.recurringPct}%`, height: '100%',
-              background: '#00c853', borderRadius: 3,
-            }} />
+      {revenueQuality && (
+        <div style={{
+          padding: 16, borderRadius: 10,
+          background: '#ffffff', border: '1px solid #e0dbd2',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif" }}>
+              Revenue Quality
+            </span>
+            <span style={{
+              fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+              color: PREDICTABILITY_COLORS[revenueQuality.predictabilityScore] || '#666',
+              fontFamily: "'Space Mono', monospace",
+            }}>
+              {revenueQuality.predictabilityScore}
+            </span>
           </div>
-          <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#1a1a1a' }}>
-            {revenueQuality.recurringPct.toFixed(0)}% recurring
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+            <div style={{ flex: 1, height: 6, background: '#e0dbd2', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${revenueQuality.recurringPct}%`, height: '100%',
+                background: '#00c853', borderRadius: 3,
+              }} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#1a1a1a' }}>
+              {revenueQuality.recurringPct.toFixed(0)}% recurring
+            </span>
+          </div>
+          <p style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", margin: 0 }}>
+            {revenueQuality.reasoning}
+          </p>
         </div>
-        <p style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", margin: 0 }}>
-          {revenueQuality.reasoning}
-        </p>
-      </div>
+      )}
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
@@ -222,7 +229,7 @@ export default function DealAnalysisCard({ analysis }: DealAnalysisCardProps) {
       )}
 
       {/* Ambiguities (if confidence is OK but there are still some) */}
-      {analysis.extractionConfidence >= 0.7 && analysis.ambiguities.length > 0 && (
+      {analysis.extractionConfidence != null && analysis.extractionConfidence >= 0.7 && analysis.ambiguities?.length > 0 && (
         <div style={{ padding: 10, borderRadius: 8, background: '#f5f0e8', border: '1px solid #e0dbd2' }}>
           <span style={{ fontSize: 10, fontWeight: 600, color: '#999', fontFamily: "'DM Sans', sans-serif" }}>
             <CheckCircle size={10} style={{ marginRight: 4, display: 'inline' }} />
