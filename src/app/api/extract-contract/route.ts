@@ -7,6 +7,72 @@ export const maxDuration = 60;
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Normalize frequency values Gemini might return
+const FREQUENCY_MAP: Record<string, string> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  annual: 'annual',
+  annually: 'annual',
+  yearly: 'annual',
+  one_time: 'one_time',
+  onetime: 'one_time',
+  'one-time': 'one_time',
+  once: 'one_time',
+  semi_annual: 'annual',
+  semi_annually: 'annual',
+  'semi-annual': 'annual',
+  'semi-annually': 'annual',
+  half_yearly: 'annual',
+  'half-yearly': 'annual',
+  biannual: 'annual',
+  bi_annual: 'annual',
+  'bi-annual': 'annual',
+};
+
+// Gemini sometimes wraps the response or uses alternative key names.
+// This normalizer unwraps and fixes common variations.
+function normalizeExtraction(raw: Record<string, unknown>): Record<string, unknown> {
+  let data = raw;
+
+  // If Gemini wrapped everything under a single key, unwrap it
+  const keys = Object.keys(data);
+  if (keys.length === 1 && typeof data[keys[0]] === 'object' && data[keys[0]] !== null && !Array.isArray(data[keys[0]])) {
+    const inner = data[keys[0]] as Record<string, unknown>;
+    if (inner.customer || inner.revenueStreams || inner.contract) {
+      data = inner;
+    }
+  }
+
+  // Map alternative top-level key names
+  const keyAliases: Record<string, string[]> = {
+    customer: ['customer', 'client', 'clientDetails', 'client_details', 'customerDetails', 'customer_details'],
+    contract: ['contract', 'contractDetails', 'contract_details', 'contractTerms', 'contract_terms'],
+    revenueStreams: ['revenueStreams', 'revenue_streams', 'revenueLines', 'revenue_lines', 'streams'],
+    partner: ['partner', 'salesPartner', 'sales_partner', 'partnerDetails', 'partner_details'],
+    analysis: ['analysis', 'dealAnalysis', 'deal_analysis', 'assessment'],
+  };
+
+  const normalized: Record<string, unknown> = {};
+  for (const [canonical, aliases] of Object.entries(keyAliases)) {
+    for (const alias of aliases) {
+      if (data[alias] !== undefined) {
+        normalized[canonical] = data[alias];
+        break;
+      }
+    }
+  }
+
+  // Normalize frequency values in revenue streams
+  if (Array.isArray(normalized.revenueStreams)) {
+    normalized.revenueStreams = (normalized.revenueStreams as Record<string, unknown>[]).map((stream) => ({
+      ...stream,
+      frequency: FREQUENCY_MAP[String(stream.frequency || '').toLowerCase().trim()] || 'monthly',
+    }));
+  }
+
+  return normalized;
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -64,9 +130,10 @@ export async function POST(req: Request) {
     }
 
     const rawExtraction = JSON.parse(jsonStr);
+    const normalized = normalizeExtraction(rawExtraction);
 
     // Validate against schema — Gemini may return incomplete/malformed data
-    const parsed = ContractExtractionSchema.safeParse(rawExtraction);
+    const parsed = ContractExtractionSchema.safeParse(normalized);
 
     // Gemini usage metadata
     const usageMetadata = response.usageMetadata;
@@ -88,10 +155,13 @@ export async function POST(req: Request) {
       const issues = parsed.error.issues
         .map((i) => `${i.path.join('.')}: ${i.message}`)
         .join('; ');
+      const rawKeys = Object.keys(rawExtraction).join(', ');
       console.error('Contract extraction validation failed:', issues);
+      console.error('Raw JSON keys:', rawKeys);
       return NextResponse.json(
         {
           error: `AI extraction returned incomplete data. Please try again or use a clearer contract PDF. Details: ${issues}`,
+          rawKeys,
           usage,
         },
         { status: 422 }
