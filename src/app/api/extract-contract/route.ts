@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { buildContractExtractionPrompt } from '@/lib/prompts/contract-extraction-prompt';
+import { ContractExtractionSchema } from '@/lib/schemas/contract-extraction';
 
 export const maxDuration = 60;
 
@@ -62,27 +63,45 @@ export async function POST(req: Request) {
       jsonStr = codeBlockMatch[1].trim();
     }
 
-    const extraction = JSON.parse(jsonStr);
+    const rawExtraction = JSON.parse(jsonStr);
+
+    // Validate against schema — Gemini may return incomplete/malformed data
+    const parsed = ContractExtractionSchema.safeParse(rawExtraction);
 
     // Gemini usage metadata
     const usageMetadata = response.usageMetadata;
     const inputTokens = usageMetadata?.promptTokenCount || 0;
     const outputTokens = usageMetadata?.candidatesTokenCount || 0;
 
+    const usage = {
+      inputTokens,
+      outputTokens,
+      estimatedCostUSD: Number(
+        (
+          (inputTokens * 0.10) / 1_000_000 +
+          (outputTokens * 0.40) / 1_000_000
+        ).toFixed(6)
+      ),
+    };
+
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('; ');
+      console.error('Contract extraction validation failed:', issues);
+      return NextResponse.json(
+        {
+          error: `AI extraction returned incomplete data. Please try again or use a clearer contract PDF. Details: ${issues}`,
+          usage,
+        },
+        { status: 422 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      extraction,
-      usage: {
-        inputTokens,
-        outputTokens,
-        // Gemini 2.0 Flash pricing: $0.10/M input, $0.40/M output
-        estimatedCostUSD: Number(
-          (
-            (inputTokens * 0.10) / 1_000_000 +
-            (outputTokens * 0.40) / 1_000_000
-          ).toFixed(6)
-        ),
-      },
+      extraction: parsed.data,
+      usage,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Extraction failed';

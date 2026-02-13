@@ -141,7 +141,7 @@ export default function ContractUploadFlow({
 
   function buildClientFromExtraction(): Client {
     const now = new Date().toISOString();
-    const pm = extraction!.customer.pricingModel;
+    const pm = extraction?.customer?.pricingModel || 'per_seat';
     const plan = pm === 'per_seat'
       ? ZAVIS_PLANS.find((p) => p.pricingModel === 'per_seat' && p.suggestedPerSeat && Math.abs(p.suggestedPerSeat - (editPerSeat || 0)) < 30)?.name || 'Custom'
       : pm === 'one_time_only' ? 'One-Time Only' : 'Custom';
@@ -156,12 +156,12 @@ export default function ContractUploadFlow({
       seatCount: editSeats,
       billingCycle: editBilling,
       plan,
-      discount: extraction!.customer.discount || 0,
+      discount: extraction?.customer?.discount || 0,
       mrr: editMrr,
       oneTimeRevenue: editOneTime,
       annualRunRate: editMrr * 12 + editOneTime,
-      onboardingDate: extraction!.contract.startDate || null,
-      notes: `Extracted from contract PDF. ${extraction!.analysis.summary}`,
+      onboardingDate: extraction?.contract?.startDate || null,
+      notes: `Extracted from contract PDF. ${extraction?.analysis?.summary || ''}`,
       createdAt: now,
       updatedAt: now,
     };
@@ -411,7 +411,7 @@ export default function ContractUploadFlow({
         </div>
 
         {/* Deal Analysis */}
-        <DealAnalysisCard analysis={extraction.analysis} />
+        {extraction.analysis && <DealAnalysisCard analysis={extraction.analysis} />}
 
         {/* Usage info */}
         {usage && (

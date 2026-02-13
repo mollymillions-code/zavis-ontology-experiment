@@ -84,7 +84,7 @@ export default function ContractUpdateFlow({
   }
 
   function buildUpdatedClient(): Client {
-    if (!extraction) return client;
+    if (!extraction?.customer) return client;
     const ext = extraction.customer;
     const pm = ext.pricingModel;
     const plan = pm === 'per_seat'
@@ -103,7 +103,7 @@ export default function ContractUpdateFlow({
       mrr: ext.mrr,
       oneTimeRevenue: ext.oneTimeRevenue,
       annualRunRate: ext.mrr * 12 + ext.oneTimeRevenue,
-      notes: `Updated from contract PDF on ${new Date().toLocaleDateString()}. ${extraction.analysis.summary}`,
+      notes: `Updated from contract PDF on ${new Date().toLocaleDateString()}. ${extraction.analysis?.summary || ''}`,
       updatedAt: new Date().toISOString(),
     };
   }
@@ -151,7 +151,7 @@ export default function ContractUpdateFlow({
   }
 
   function getComparison(): ComparisonField[] {
-    if (!extraction) return [];
+    if (!extraction?.customer) return [];
     const ext = extraction.customer;
     const fmt = (v: string | number | null | undefined) => v == null ? '—' : String(v);
     const fmtAED = (v: number | null | undefined) => v == null ? '—' : formatAED(v);
@@ -311,7 +311,7 @@ export default function ContractUpdateFlow({
         </div>
 
         {/* Deal Analysis */}
-        <DealAnalysisCard analysis={extraction.analysis} />
+        {extraction.analysis && <DealAnalysisCard analysis={extraction.analysis} />}
 
         {/* Usage */}
         {usage && (
