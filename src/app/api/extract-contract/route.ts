@@ -70,6 +70,15 @@ function normalizeExtraction(raw: Record<string, unknown>): Record<string, unkno
     }));
   }
 
+  // Clean up null values in nested objects — Gemini often returns null for optional strings
+  const customer = normalized.customer as Record<string, unknown> | undefined;
+  if (customer?.billingAddress && typeof customer.billingAddress === 'object') {
+    const addr = customer.billingAddress as Record<string, unknown>;
+    for (const key of Object.keys(addr)) {
+      if (addr[key] === null) addr[key] = undefined;
+    }
+  }
+
   return normalized;
 }
 
