@@ -75,7 +75,7 @@ export default function InvoicePDFPreview({ invoice, client }: InvoicePDFPreview
             <div style={{
               fontSize: 18,
               fontWeight: 700,
-              color: invoice.balanceDue > 0 ? '#d32f2f' : '#00c853',
+              color: '#1a1a1a',
               fontFamily: "'Space Mono', monospace",
             }}>
               {fmt(invoice.balanceDue)} {sym}
@@ -178,7 +178,7 @@ export default function InvoicePDFPreview({ invoice, client }: InvoicePDFPreview
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', background: '#f5f0e8', borderRadius: 6, marginTop: 6, paddingLeft: 8, paddingRight: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>Balance Due</span>
-            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: invoice.balanceDue > 0 ? '#d32f2f' : '#00c853' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#1a1a1a' }}>
               {fmt(invoice.balanceDue)} {sym}
             </span>
           </div>
