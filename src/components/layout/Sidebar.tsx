@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -16,6 +16,7 @@ import {
   Network,
   FileText,
   CreditCard,
+  LogOut,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -36,6 +37,13 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  }
 
   return (
     <aside
@@ -92,13 +100,25 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <p
-          className="text-xs"
-          style={{ color: '#666', fontFamily: "'Space Mono', monospace", fontSize: 11 }}
+      <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full transition-colors"
+          style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontWeight: 500,
+            fontSize: 12,
+            color: '#999',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#999'; e.currentTarget.style.background = 'transparent'; }}
         >
-          v3.0 &middot; Internal
-        </p>
+          <LogOut className="w-4 h-4 shrink-0" style={{ color: '#666' }} />
+          Sign out
+        </button>
       </div>
     </aside>
   );
