@@ -123,7 +123,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@savage.ai"
+              placeholder="you@zavis.ai"
               required
               style={{
                 width: '100%',
