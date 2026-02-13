@@ -228,7 +228,7 @@ export default function InvoicePDFDocument({ invoice, client, companyConfig }: I
             </Text>
             <Text style={styles.balanceDueLabel}>Balance Due</Text>
             <Text style={[styles.balanceDueValue, {
-              color: invoice.balanceDue > 0 ? '#d32f2f' : '#00c853',
+              color: '#1a1a1a',
             }]}>
               {fmt(invoice.balanceDue)} {sym}
             </Text>
@@ -309,7 +309,7 @@ export default function InvoicePDFDocument({ invoice, client, companyConfig }: I
               <Text style={[styles.grandTotalLabel, { fontSize: 11 }]}>Balance Due</Text>
               <Text style={[styles.grandTotalValue, {
                 fontSize: 11,
-                color: invoice.balanceDue > 0 ? '#d32f2f' : '#00c853',
+                color: '#1a1a1a',
               }]}>
                 {fmt(invoice.balanceDue)} {sym}
               </Text>

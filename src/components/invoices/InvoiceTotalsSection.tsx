@@ -73,7 +73,7 @@ export default function InvoiceTotalsSection({
           paddingRight: 12,
         }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif" }}>Balance Due</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: balanceDue > 0 ? '#d32f2f' : '#00c853', fontFamily: "'Space Mono', monospace" }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', fontFamily: "'Space Mono', monospace" }}>
             {fmt(balanceDue)} {sym}
           </span>
         </div>

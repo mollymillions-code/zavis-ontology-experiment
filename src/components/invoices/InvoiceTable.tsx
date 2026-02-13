@@ -135,7 +135,7 @@ export default function InvoiceTable({ invoices, clients, onView }: InvoiceTable
                 textAlign: 'right',
                 fontFamily: "'Space Mono', monospace",
                 fontWeight: 600,
-                color: inv.balanceDue > 0 ? '#d32f2f' : '#00c853',
+                color: '#1a1a1a',
               }}>
                 {fmt(inv.balanceDue, inv.currency)}
               </td>
