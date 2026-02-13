@@ -12,7 +12,7 @@ function getSecret() {
 }
 
 export function getAllowedDomain(): string {
-  return process.env.ALLOWED_EMAIL_DOMAIN || 'savage.ai';
+  return (process.env.ALLOWED_EMAIL_DOMAIN || 'zavis.ai').trim();
 }
 
 export function isEmailAllowed(email: string): boolean {
