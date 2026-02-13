@@ -199,6 +199,18 @@ export const paymentsReceived = pgTable('payments_received', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+
+export const users = pgTable('users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ===== SEQUENCES (auto-increment for invoice/payment numbers) =====
 export const sequences = pgTable('sequences', {
   name: text('name').primaryKey(), // 'invoice' or 'payment'
