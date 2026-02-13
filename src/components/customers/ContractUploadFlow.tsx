@@ -162,6 +162,11 @@ export default function ContractUploadFlow({
       annualRunRate: editMrr * 12 + editOneTime,
       onboardingDate: extraction?.contract?.startDate || null,
       notes: `Extracted from contract PDF. ${extraction?.analysis?.summary || ''}`,
+      email: extraction?.customer?.email || null,
+      phone: extraction?.customer?.phone || null,
+      companyLegalName: extraction?.customer?.companyLegalName || null,
+      trn: extraction?.customer?.trn || null,
+      billingAddress: extraction?.customer?.billingAddress || null,
       createdAt: now,
       updatedAt: now,
     };

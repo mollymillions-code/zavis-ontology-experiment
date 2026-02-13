@@ -39,6 +39,7 @@ export function dbRowToClient(row: Record<string, unknown>): Client {
     email: (row.email as string) || null,
     phone: (row.phone as string) || null,
     companyLegalName: (row.companyLegalName as string) || null,
+    trn: (row.trn as string) || null,
     billingAddress: (row.billingAddress as BillingAddress) || null,
     defaultTerms: (row.defaultTerms as string) || null,
     createdAt: row.createdAt instanceof Date
@@ -70,6 +71,7 @@ export function clientToDbValues(c: Client) {
     email: c.email ?? null,
     phone: c.phone ?? null,
     companyLegalName: c.companyLegalName ?? null,
+    trn: c.trn ?? null,
     billingAddress: c.billingAddress ?? null,
     defaultTerms: c.defaultTerms ?? null,
     createdAt: new Date(c.createdAt),
