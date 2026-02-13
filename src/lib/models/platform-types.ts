@@ -73,6 +73,7 @@ export interface Client {
   email?: string | null;
   phone?: string | null;
   companyLegalName?: string | null;
+  trn?: string | null; // Tax Registration Number (UAE TRN)
   billingAddress?: BillingAddress | null;
   defaultTerms?: string | null;
   createdAt: string;

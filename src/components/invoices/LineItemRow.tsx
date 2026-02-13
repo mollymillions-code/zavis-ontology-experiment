@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { InvoiceLineItem, CatalogItem } from '@/lib/models/platform-types';
 
@@ -30,11 +31,17 @@ export default function LineItemRow({
     onChange({ ...item, ...updates, amount });
   }
 
+  // Track whether user is in "custom item" text-input mode
+  const [customMode, setCustomMode] = useState(!item.itemId && !!item.description);
+
   function handleCatalogSelect(itemId: string) {
     if (!itemId) {
+      // User selected "Custom item..." — switch to text input mode
+      setCustomMode(true);
       recalcAmount({ itemId: undefined, description: '', rate: 0 });
       return;
     }
+    setCustomMode(false);
     const cat = catalogItems.find((c) => c.id === itemId);
     if (cat) {
       recalcAmount({ itemId: cat.id, description: cat.name, rate: cat.rate });
@@ -70,29 +77,46 @@ export default function LineItemRow({
           <span style={{ fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#1a1a1a' }}>
             {item.description}
           </span>
-        ) : (
+        ) : customMode ? (
+          /* Custom item mode — editable text input */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <select
-              value={item.itemId || ''}
-              onChange={(e) => handleCatalogSelect(e.target.value)}
-              style={{
-                ...inputStyle,
-                cursor: 'pointer',
-              }}
-            >
-              <option value="">Custom item...</option>
-              {catalogItems.filter((c) => c.isActive).map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.rate} {c.unit})</option>
-              ))}
-            </select>
             <input
               type="text"
               value={item.description}
               onChange={(e) => onChange({ ...item, description: e.target.value })}
-              placeholder="Item description"
-              style={inputStyle}
+              placeholder="Type item name..."
+              autoFocus
+              style={{ ...inputStyle, borderColor: '#60a5fa' }}
             />
+            <button
+              type="button"
+              onClick={() => setCustomMode(false)}
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                fontSize: 10,
+                color: '#2979ff',
+                cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                textAlign: 'left',
+              }}
+            >
+              Choose from catalog
+            </button>
           </div>
+        ) : (
+          /* Catalog selection dropdown */
+          <select
+            value={item.itemId || ''}
+            onChange={(e) => handleCatalogSelect(e.target.value)}
+            style={{ ...inputStyle, cursor: 'pointer' }}
+          >
+            <option value="">Custom item...</option>
+            {catalogItems.filter((c) => c.isActive).map((c) => (
+              <option key={c.id} value={c.id}>{c.name} ({c.rate} {c.unit})</option>
+            ))}
+          </select>
         )}
       </td>
       <td style={{ padding: '8px 6px' }}>

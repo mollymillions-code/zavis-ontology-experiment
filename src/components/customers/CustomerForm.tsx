@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type { Client, ClientStatus } from '@/lib/models/platform-types';
+import type { Client, ClientStatus, BillingAddress } from '@/lib/models/platform-types';
 import { ZAVIS_PLANS } from '@/lib/models/platform-types';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { usePartnerStore } from '@/lib/store/partner-store';
 
 interface ClientFormProps {
@@ -71,6 +72,16 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
   const [notes, setNotes] = useState(client?.notes || '');
   const [billingCycle, setBillingCycle] = useState(client?.billingCycle || 'Monthly');
 
+  // Billing / invoice fields
+  const [email, setEmail] = useState(client?.email || '');
+  const [phone, setPhone] = useState(client?.phone || '');
+  const [companyLegalName, setCompanyLegalName] = useState(client?.companyLegalName || '');
+  const [trn, setTrn] = useState(client?.trn || '');
+  const [billingAddress, setBillingAddress] = useState<BillingAddress>(client?.billingAddress || {});
+  const [showBilling, setShowBilling] = useState(
+    !!(client?.email || client?.phone || client?.companyLegalName || client?.trn || client?.billingAddress?.street1)
+  );
+
   const plan = ZAVIS_PLANS.find((p) => p.id === selectedPlan)!;
   const isPerSeat = plan.pricingModel === 'per_seat';
   const isOneTime = plan.pricingModel === 'one_time_only';
@@ -112,6 +123,11 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
       annualRunRate: finalMRR * 12 + oneTimeRevenue,
       onboardingDate: onboardingDate || null,
       notes: notes || undefined,
+      email: email || null,
+      phone: phone || null,
+      companyLegalName: companyLegalName || null,
+      trn: trn || null,
+      billingAddress: Object.values(billingAddress).some((v) => v) ? billingAddress : null,
       createdAt: client?.createdAt || now,
       updatedAt: now,
     };
@@ -256,6 +272,123 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
             />
           </div>
         </div>
+      </div>
+
+      {/* Billing & Contact */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowBilling(!showBilling)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 700,
+            color: '#1a1a1a',
+            fontFamily: "'DM Sans', sans-serif",
+            marginBottom: showBilling ? 12 : 0,
+          }}
+        >
+          Billing & Contact
+          {showBilling ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {!showBilling && (email || phone || companyLegalName) && (
+            <span style={{ fontSize: 10, color: '#00a844', fontWeight: 500, marginLeft: 4 }}>
+              (has data)
+            </span>
+          )}
+        </button>
+        {showBilling && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Email</label>
+                <input style={inputStyle} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="accounts@client.com" />
+              </div>
+              <div>
+                <label style={labelStyle}>Phone</label>
+                <input style={inputStyle} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+971 5x xxx xxxx" />
+              </div>
+              <div>
+                <label style={labelStyle}>Company Legal Name</label>
+                <input style={inputStyle} value={companyLegalName} onChange={(e) => setCompanyLegalName(e.target.value)} placeholder="Full legal entity name" />
+              </div>
+              <div>
+                <label style={labelStyle}>TRN (Tax Registration No.)</label>
+                <input style={inputStyle} value={trn} onChange={(e) => setTrn(e.target.value)} placeholder="Optional — UAE TRN" />
+              </div>
+            </div>
+
+            {/* Billing Address */}
+            <div style={{ padding: 12, borderRadius: 8, background: '#faf8f4', border: '1px solid #e0dbd2' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#666', fontFamily: "'DM Sans', sans-serif", margin: '0 0 8px 0' }}>
+                Billing Address
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.attention || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, attention: e.target.value })}
+                    placeholder="Attention (e.g. Accounts Dept)"
+                  />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.street1 || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, street1: e.target.value })}
+                    placeholder="Street address line 1"
+                  />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.street2 || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, street2: e.target.value })}
+                    placeholder="Street address line 2"
+                  />
+                </div>
+                <div>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.city || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, city: e.target.value })}
+                    placeholder="City"
+                  />
+                </div>
+                <div>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.state || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, state: e.target.value })}
+                    placeholder="State / Emirate"
+                  />
+                </div>
+                <div>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.country || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, country: e.target.value })}
+                    placeholder="Country"
+                  />
+                </div>
+                <div>
+                  <input
+                    style={inputStyle}
+                    value={billingAddress.zip || ''}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, zip: e.target.value })}
+                    placeholder="ZIP / Postal code"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Notes */}

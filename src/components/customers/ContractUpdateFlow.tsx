@@ -104,6 +104,11 @@ export default function ContractUpdateFlow({
       oneTimeRevenue: ext.oneTimeRevenue,
       annualRunRate: ext.mrr * 12 + ext.oneTimeRevenue,
       notes: `Updated from contract PDF on ${new Date().toLocaleDateString()}. ${extraction.analysis?.summary || ''}`,
+      email: ext.email || client.email,
+      phone: ext.phone || client.phone,
+      companyLegalName: ext.companyLegalName || client.companyLegalName,
+      trn: ext.trn || client.trn,
+      billingAddress: ext.billingAddress || client.billingAddress,
       updatedAt: new Date().toISOString(),
     };
   }
@@ -165,6 +170,10 @@ export default function ContractUpdateFlow({
       { label: 'Billing Cycle', current: fmt(client.billingCycle), extracted: fmt(ext.billingCycle), changed: client.billingCycle !== ext.billingCycle },
       { label: 'Discount', current: `${client.discount || 0}%`, extracted: `${ext.discount || 0}%`, changed: (client.discount || 0) !== (ext.discount || 0) },
       { label: 'Pricing Model', current: fmt(client.pricingModel), extracted: fmt(ext.pricingModel), changed: client.pricingModel !== ext.pricingModel },
+      { label: 'Email', current: fmt(client.email), extracted: fmt(ext.email), changed: (client.email || '') !== (ext.email || '') },
+      { label: 'Phone', current: fmt(client.phone), extracted: fmt(ext.phone), changed: (client.phone || '') !== (ext.phone || '') },
+      { label: 'Legal Name', current: fmt(client.companyLegalName), extracted: fmt(ext.companyLegalName), changed: (client.companyLegalName || '') !== (ext.companyLegalName || '') },
+      { label: 'TRN', current: fmt(client.trn), extracted: fmt(ext.trn), changed: (client.trn || '') !== (ext.trn || '') },
     ];
     return fields;
   }

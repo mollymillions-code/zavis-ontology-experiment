@@ -61,6 +61,11 @@ If the contract uses EUR, convert to AED at 4.0 AED/EUR and note this in ambigui
   "customer": {
     "name": "string",
     "contactPerson": "string or null",
+    "companyLegalName": "string or null (full legal entity name if different from name)",
+    "email": "string or null",
+    "phone": "string or null",
+    "trn": "string or null (Tax Registration Number / UAE TRN if mentioned)",
+    "billingAddress": { "attention": "string", "street1": "string", "street2": "string", "city": "string", "state": "string", "country": "string", "zip": "string" } or null,
     "pricingModel": "per_seat" | "flat_mrr" | "one_time_only",
     "plan": "string or null",
     "perSeatCost": "number or null",

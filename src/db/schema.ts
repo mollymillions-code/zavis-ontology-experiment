@@ -21,6 +21,7 @@ export const clients = pgTable('clients', {
   email: text('email'),
   phone: text('phone'),
   companyLegalName: text('company_legal_name'),
+  trn: text('trn'), // Tax Registration Number (UAE TRN)
   billingAddress: jsonb('billing_address'), // { attention, street1, street2, city, state, country, zip }
   defaultTerms: text('default_terms'), // PaymentTerms for this client
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
