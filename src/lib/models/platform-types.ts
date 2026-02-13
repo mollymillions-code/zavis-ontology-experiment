@@ -44,13 +44,13 @@ export const ZAVIS_PLANS: ZavisPlan[] = [
 // ========== CLIENT ==========
 
 export interface BillingAddress {
-  attention?: string;
-  street1?: string;
-  street2?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  zip?: string;
+  attention?: string | null;
+  street1?: string | null;
+  street2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  zip?: string | null;
 }
 
 export interface Client {
