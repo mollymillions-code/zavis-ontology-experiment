@@ -170,7 +170,7 @@ export default function SignupPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@savage.ai"
+              placeholder="you@zavis.ai"
               required
               style={{
                 width: '100%',
@@ -191,7 +191,7 @@ export default function SignupPage() {
               color: '#999',
               marginTop: 4,
             }}>
-              Only @savage.ai email addresses are allowed
+              Only @zavis.ai email addresses are allowed
             </p>
           </div>
 
