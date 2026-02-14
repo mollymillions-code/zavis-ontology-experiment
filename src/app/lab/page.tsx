@@ -102,7 +102,7 @@ function LabPageContent() {
 
   const getCostValue = (category: CostCategory): number => editedCosts[category] || 0;
 
-  const activeClients = clients.filter((c) => c.status === 'active');
+  const activeClients = useMemo(() => clients.filter((c) => c.status === 'active'), [clients]);
   const activeClientCount = activeClients.length;
   const totalSeats = activeClients.reduce((s, c) => s + (c.seatCount || 0), 0);
   const totalCostProjected = Object.values(editedCosts).reduce((s, amt) => s + amt, 0);

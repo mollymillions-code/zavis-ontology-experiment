@@ -51,8 +51,11 @@ export const useSnapshotStore = create<SnapshotState>()(
       },
 
       getPreviousSnapshot: (month) => {
-        const snaps = get().snapshots.filter((s) => s.month < month);
-        return snaps.length > 0 ? snaps[snaps.length - 1] : undefined;
+        const snaps = get().snapshots;
+        for (let i = snaps.length - 1; i >= 0; i -= 1) {
+          if (snaps[i].month < month) return snaps[i];
+        }
+        return undefined;
       },
 
       hydrateFromDb: async () => {

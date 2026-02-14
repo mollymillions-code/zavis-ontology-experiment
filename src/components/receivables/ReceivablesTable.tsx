@@ -388,39 +388,24 @@ export default function ReceivablesTable({ receivables, clientNames, invoices = 
   // Build pivot: clientId → month → entries[]
   const { months, clientIds, pivot, clientTotals, monthTotals, grandTotal } = useMemo(() => {
     const monthSet = new Set<string>();
-    const clientSet = new Set<string>();
     const map: Record<string, Record<string, ReceivableEntry[]>> = {};
+    const clientTotals: Record<string, number> = {};
+    const monthTotals: Record<string, number> = {};
+    let grandTotal = 0;
 
     for (const r of receivables) {
       monthSet.add(r.month);
-      clientSet.add(r.clientId);
       if (!map[r.clientId]) map[r.clientId] = {};
       if (!map[r.clientId][r.month]) map[r.clientId][r.month] = [];
       map[r.clientId][r.month].push(r);
+
+      clientTotals[r.clientId] = (clientTotals[r.clientId] || 0) + r.amount;
+      monthTotals[r.month] = (monthTotals[r.month] || 0) + r.amount;
+      grandTotal += r.amount;
     }
 
     const months = Array.from(monthSet).sort();
-    const clientIds = Array.from(clientSet).sort((a, b) => {
-      const totalA = receivables.filter((r) => r.clientId === a).reduce((s, r) => s + r.amount, 0);
-      const totalB = receivables.filter((r) => r.clientId === b).reduce((s, r) => s + r.amount, 0);
-      return totalB - totalA;
-    });
-
-    const clientTotals: Record<string, number> = {};
-    for (const cid of clientIds) {
-      clientTotals[cid] = receivables
-        .filter((r) => r.clientId === cid)
-        .reduce((s, r) => s + r.amount, 0);
-    }
-
-    const monthTotals: Record<string, number> = {};
-    for (const m of months) {
-      monthTotals[m] = receivables
-        .filter((r) => r.month === m)
-        .reduce((s, r) => s + r.amount, 0);
-    }
-
-    const grandTotal = receivables.reduce((s, r) => s + r.amount, 0);
+    const clientIds = Object.keys(clientTotals).sort((a, b) => clientTotals[b] - clientTotals[a]);
 
     return { months, clientIds, pivot: map, clientTotals, monthTotals, grandTotal };
   }, [receivables]);

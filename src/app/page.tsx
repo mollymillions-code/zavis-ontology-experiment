@@ -69,7 +69,7 @@ export default function DashboardPage() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const previousSnapshot = useSnapshotStore((s) => s.getPreviousSnapshot(latestSnapshot?.month || currentMonth));
 
-  const activeClients = clients.filter((c) => c.status === 'active');
+  const activeClients = useMemo(() => clients.filter((c) => c.status === 'active'), [clients]);
 
   // MoM deltas (from snapshots if available)
   const mrrDelta = useMemo(() => {
@@ -92,29 +92,44 @@ export default function DashboardPage() {
   }, [metrics.activeClientCount, previousSnapshot]);
 
   // Donut data — by partner
-  const donutData = Object.entries(metrics.mrrByPartner).map(([partner, value]) => ({
-    name: partner,
-    value,
-    partner,
-  }));
+  const donutData = useMemo(
+    () =>
+      Object.entries(metrics.mrrByPartner).map(([partner, value]) => ({
+        name: partner,
+        value,
+        partner,
+      })),
+    [metrics.mrrByPartner],
+  );
 
   // Bar chart data
-  const barData = activeClients.map((c) => ({
-    name: c.name,
-    mrr: c.mrr,
-    partner: c.salesPartner || 'Direct',
-  }));
+  const barData = useMemo(
+    () =>
+      activeClients.map((c) => ({
+        name: c.name,
+        mrr: c.mrr,
+        partner: c.salesPartner || 'Direct',
+      })),
+    [activeClients],
+  );
 
   // Revenue composition: recurring vs one-time
-  const compositionData = [
-    { name: 'Recurring', value: metrics.totalMRR, color: '#60a5fa' },
-    { name: 'One-Time', value: metrics.totalOneTimeRevenue, color: '#fbbf24' },
-  ].filter((d) => d.value > 0);
-  const compositionTotal = compositionData.reduce((s, d) => s + d.value, 0);
+  const compositionData = useMemo(
+    () =>
+      [
+        { name: 'Recurring', value: metrics.totalMRR, color: '#60a5fa' },
+        { name: 'One-Time', value: metrics.totalOneTimeRevenue, color: '#fbbf24' },
+      ].filter((d) => d.value > 0),
+    [metrics.totalMRR, metrics.totalOneTimeRevenue],
+  );
+  const compositionTotal = useMemo(
+    () => compositionData.reduce((s, d) => s + d.value, 0),
+    [compositionData],
+  );
 
   // Concentration risk
   const clientData = useMemo(() => {
-    return clients
+    return [...clients]
       .sort((a, b) => b.mrr - a.mrr)
       .map((c) => {
         const concentrationPct = metrics.totalMRR > 0 ? (c.mrr / metrics.totalMRR) * 100 : 0;

@@ -68,15 +68,31 @@ export interface UnitEconomics {
 }
 
 export function computeUnitEconomics(clients: Client[], a: UnitAssumptions): UnitEconomics {
-  const active = clients.filter((c) => c.status === 'active');
-  const activeCount = active.length;
-  const totalSeats = active.reduce((s, c) => s + (c.seatCount || 0), 0);
-  const totalMRR = active.reduce((s, c) => s + c.mrr, 0);
+  let activeCount = 0;
+  let totalSeats = 0;
+  let totalMRR = 0;
+  let perSeatRevenue = 0;
+  let perSeatSeats = 0;
+  let partnerMRR = 0;
 
-  // Per-seat clients only for average price
-  const perSeatClients = active.filter((c) => c.pricingModel === 'per_seat' && c.seatCount && c.seatCount > 0);
-  const perSeatRevenue = perSeatClients.reduce((s, c) => s + c.mrr, 0);
-  const perSeatSeats = perSeatClients.reduce((s, c) => s + (c.seatCount || 0), 0);
+  for (const client of clients) {
+    if (client.status !== 'active') continue;
+
+    const seats = client.seatCount || 0;
+    activeCount += 1;
+    totalSeats += seats;
+    totalMRR += client.mrr;
+
+    if (client.pricingModel === 'per_seat' && seats > 0) {
+      perSeatRevenue += client.mrr;
+      perSeatSeats += seats;
+    }
+
+    if (client.salesPartner && client.salesPartner !== 'Direct') {
+      partnerMRR += client.mrr;
+    }
+  }
+
   const avgPerSeatPrice = perSeatSeats > 0 ? perSeatRevenue / perSeatSeats : 0;
 
   // Revenue per seat
@@ -98,8 +114,6 @@ export function computeUnitEconomics(clients: Client[], a: UnitAssumptions): Uni
     ? (a.accountMgmtPerClient * activeCount) / totalSeats
     : 0;
   // Commission: only partner clients contribute commission
-  const partnerActive = active.filter((c) => c.salesPartner && c.salesPartner !== 'Direct');
-  const partnerMRR = partnerActive.reduce((s, c) => s + c.mrr, 0);
   const totalCommission = partnerMRR * a.partnerCommissionRate;
   const commissionPerSeat = totalSeats > 0 ? totalCommission / totalSeats : 0;
   const totalSharedCostPerSeat = serverPerSeat + engineeringPerSeat + softwarePerSeat + accountMgmtPerSeat + commissionPerSeat;
@@ -276,9 +290,16 @@ export function computePlanEconomics(
 // ========== CLIENT UNIT ECONOMICS ==========
 
 export function computeClientUnitRows(clients: Client[], a: UnitAssumptions): ClientUnitRow[] {
-  const active = clients.filter((c) => c.status === 'active');
+  const active: Client[] = [];
+  let totalSeats = 0;
+  for (const client of clients) {
+    if (client.status !== 'active') continue;
+    active.push(client);
+    totalSeats += client.seatCount || 0;
+  }
   const activeCount = active.length;
-  const totalSeats = active.reduce((s, c) => s + (c.seatCount || 0), 0);
+
+  if (activeCount === 0) return [];
 
   return active.map((c) => {
     const seats = c.seatCount || 1; // treat flat clients as 1 "unit"

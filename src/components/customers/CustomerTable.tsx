@@ -73,15 +73,23 @@ export default function ClientTable({ clients, onEdit, onDelete }: ClientTablePr
           </tr>
         </thead>
         <tbody>
-          {clients.map((client, i) => (
-            <tr
-              key={client.id}
-              style={{
-                borderBottom: '1px solid #e0dbd2',
-                background: i % 2 === 0 ? '#fafafa' : '#ffffff',
-                transition: 'background 0.1s',
-              }}
-            >
+          {clients.map((client, i) => {
+            const commission = getCommission(client);
+            const hasRecurring = client.mrr > 0;
+            const hasOneTime = client.oneTimeRevenue > 0;
+            const revenueType = hasRecurring && hasOneTime ? 'mixed' : hasRecurring ? 'recurring' : 'one-time';
+            const revenueTypeColor = revenueType === 'recurring' ? '#10b981' : revenueType === 'one-time' ? '#f59e0b' : '#a78bfa';
+            const revenueTypeLabel = revenueType === 'recurring' ? 'Recurring' : revenueType === 'one-time' ? 'One-Time' : 'Mixed';
+
+            return (
+              <tr
+                key={client.id}
+                style={{
+                  borderBottom: '1px solid #e0dbd2',
+                  background: i % 2 === 0 ? '#fafafa' : '#ffffff',
+                  transition: 'background 0.1s',
+                }}
+              >
               <td style={{
                 padding: '10px 12px',
                 fontWeight: 600,
@@ -166,26 +174,17 @@ export default function ClientTable({ clients, onEdit, onDelete }: ClientTablePr
                 fontFamily: "'Space Mono', monospace",
                 fontSize: 12,
                 fontWeight: 600,
-                color: getCommission(client) > 0 ? '#60a5fa' : '#ccc',
+                color: commission > 0 ? '#60a5fa' : '#ccc',
               }}>
-                {getCommission(client) > 0 ? formatAED(getCommission(client)) : '—'}
+                {commission > 0 ? formatAED(commission) : '—'}
               </td>
               <td style={{ padding: '10px 12px' }}>
-                {(() => {
-                  const hasRecurring = client.mrr > 0;
-                  const hasOneTime = client.oneTimeRevenue > 0;
-                  const type = hasRecurring && hasOneTime ? 'mixed' : hasRecurring ? 'recurring' : 'one-time';
-                  const color = type === 'recurring' ? '#10b981' : type === 'one-time' ? '#f59e0b' : '#a78bfa';
-                  const label = type === 'recurring' ? 'Recurring' : type === 'one-time' ? 'One-Time' : 'Mixed';
-                  return (
-                    <span style={{
-                      padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
-                      background: `${color}18`, color, fontFamily: "'DM Sans', sans-serif",
-                    }}>
-                      {label}
-                    </span>
-                  );
-                })()}
+                <span style={{
+                  padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                  background: `${revenueTypeColor}18`, color: revenueTypeColor, fontFamily: "'DM Sans', sans-serif",
+                }}>
+                  {revenueTypeLabel}
+                </span>
               </td>
               <td style={{ padding: '10px 12px' }}>
                 <StatusBadge status={client.status} />
@@ -224,8 +223,9 @@ export default function ClientTable({ clients, onEdit, onDelete }: ClientTablePr
                   </button>
                 </div>
               </td>
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

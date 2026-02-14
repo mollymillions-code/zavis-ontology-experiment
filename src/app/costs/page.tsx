@@ -41,50 +41,58 @@ export default function CostsPage() {
   }, [costs, clients]);
 
   const categories: CostCategory[] = ['aws', 'chatwoot_seats', 'payroll', 'sales_spend', 'chatwoot_sub', 'commissions'];
+  const costByCategoryAndType = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const cost of costs) {
+      map[`${cost.category}-${cost.type}`] = cost.amount;
+    }
+    return map;
+  }, [costs]);
 
   function getCostAmount(category: CostCategory, type: 'actual' | 'projected'): number {
     const key = `${category}-${type}`;
     if (editedValues[key] !== undefined) return editedValues[key];
-
-    const cost = costs.find((c) => c.category === category && c.type === type);
-    return cost ? cost.amount : 0;
+    return costByCategoryAndType[key] || 0;
   }
 
   function handleEdit(category: CostCategory, type: 'actual' | 'projected', value: string) {
     const key = `${category}-${type}`;
     const numValue = parseFloat(value) || 0;
-    setEditedValues({ ...editedValues, [key]: numValue });
+    setEditedValues((prev) => ({ ...prev, [key]: numValue }));
   }
 
   function handlePerSeatEdit(category: CostCategory, value: string) {
     const perSeat = parseFloat(value) || 0;
     const monthly = perSeat * totalSeats;
     const key = `${category}-actual`;
-    setEditedValues({ ...editedValues, [key]: monthly });
+    setEditedValues((prev) => ({ ...prev, [key]: monthly }));
   }
 
   async function handleSave() {
+    if (Object.keys(editedValues).length === 0) return;
     setSaving(true);
 
-    for (const [key, value] of Object.entries(editedValues)) {
-      const [category, type] = key.split('-');
-      const cost = costs.find((c) => c.category === category && c.type === type);
-
-      if (cost) {
-        await fetch(`/api/costs/${cost.month}`, {
+    try {
+      const updates = Object.entries(editedValues).flatMap(([key, value]) => {
+        const [category, type] = key.split('-');
+        const cost = costs.find((c) => c.category === category && c.type === type);
+        if (!cost) return [];
+        return fetch(`/api/costs/${cost.month}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: cost.id, amount: value }),
         });
-      }
-    }
+      });
 
-    // Refresh data
-    const res = await fetch('/api/costs');
-    const data = await res.json();
-    setCosts(data);
-    setEditedValues({});
-    setSaving(false);
+      await Promise.all(updates);
+
+      const res = await fetch('/api/costs');
+      const data = await res.json();
+      setCosts(data);
+      setEditedValues({});
+    } finally {
+      setSaving(false);
+    }
   }
 
   const tableStyle = {

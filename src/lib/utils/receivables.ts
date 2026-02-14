@@ -66,16 +66,32 @@ export function getReceivableTotals(receivables: ReceivableEntry[]) {
 }
 
 export function getMonthlyReceivableSummary(receivables: ReceivableEntry[]) {
-  const byMonth = getReceivablesByMonth(receivables);
-  const months = Object.keys(byMonth).sort();
+  const summaryByMonth: Record<string, { total: number; paid: number; count: number }> = {};
 
-  return months.map((month) => {
-    const entries = byMonth[month];
-    const total = entries.reduce((sum, r) => sum + r.amount, 0);
-    const paid = entries.filter((r) => r.status === 'paid').reduce((sum, r) => sum + r.amount, 0);
-    const outstanding = total - paid;
-    return { month, total, paid, outstanding, count: entries.length };
-  });
+  for (const r of receivables) {
+    if (!summaryByMonth[r.month]) {
+      summaryByMonth[r.month] = { total: 0, paid: 0, count: 0 };
+    }
+    const monthSummary = summaryByMonth[r.month];
+    monthSummary.total += r.amount;
+    monthSummary.count += 1;
+    if (r.status === 'paid') {
+      monthSummary.paid += r.amount;
+    }
+  }
+
+  return Object.keys(summaryByMonth)
+    .sort()
+    .map((month) => {
+      const monthly = summaryByMonth[month];
+      return {
+        month,
+        total: monthly.total,
+        paid: monthly.paid,
+        outstanding: monthly.total - monthly.paid,
+        count: monthly.count,
+      };
+    });
 }
 
 export function filterReceivablesByStatus(

@@ -257,21 +257,21 @@ function ChartTooltipContent({ active, payload, label }: { active?: boolean; pay
 export default function ProjectionsPage() {
   const clients = useClientStore((s) => s.clients);
 
-  const active = clients.filter((c) => c.status === 'active');
+  const activeClients = useMemo(() => clients.filter((c) => c.status === 'active'), [clients]);
 
   // Compute starting position from real data
-  const startingClients = active.length;
+  const startingClients = activeClients.length;
   const startingSeats = useMemo(() => {
-    return active.reduce((sum, c) => sum + (c.seatCount || 0), 0);
-  }, [active]);
+    return activeClients.reduce((sum, c) => sum + (c.seatCount || 0), 0);
+  }, [activeClients]);
 
   const avgSeatPrice = useMemo(() => {
-    const perSeat = active.filter(isPerSeatClient);
+    const perSeat = activeClients.filter(isPerSeatClient);
     if (perSeat.length === 0) return 249;
     return Math.round(perSeat.reduce((s, c) => s + (c.perSeatCost || 0), 0) / perSeat.length);
-  }, [active]);
+  }, [activeClients]);
 
-  const currentMRR = useMemo(() => active.reduce((s, c) => s + c.mrr, 0), [active]);
+  const currentMRR = useMemo(() => activeClients.reduce((s, c) => s + c.mrr, 0), [activeClients]);
 
   // ===== STATE =====
   const [timeline, setTimeline] = useState(12);

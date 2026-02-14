@@ -7,32 +7,51 @@ export function useDashboardMetrics(): DashboardMetrics {
   const receivables = useClientStore((s) => s.receivables);
 
   return useMemo(() => {
-    const active = clients.filter((c) => c.status === 'active');
-
     let totalMRR = 0;
     let totalOneTimeRevenue = 0;
+    let activeClientCount = 0;
+    let totalSeats = 0;
     const mrrByPartner: Record<string, number> = {};
     const clientsByPartner: Record<string, number> = {};
+    let subscriberCount = 0;
+    let activeSubscriberCount = 0;
+    let subscriberMRRTotal = 0;
+    let oneTimeClientCount = 0;
+    let activeOneTimeClientCount = 0;
+    let oneTimeRevenueTotal = 0;
 
-    for (const client of active) {
-      totalMRR += client.mrr;
-      totalOneTimeRevenue += client.oneTimeRevenue;
+    for (const client of clients) {
+      const isActive = client.status === 'active';
+      const isSubscriber = client.pricingModel === 'per_seat' || client.pricingModel === 'flat_mrr';
+      const isOneTimeClient = client.pricingModel === 'one_time_only';
 
-      const partner = client.salesPartner || 'Direct';
-      mrrByPartner[partner] = (mrrByPartner[partner] || 0) + client.mrr;
-      clientsByPartner[partner] = (clientsByPartner[partner] || 0) + 1;
+      if (isActive) {
+        activeClientCount += 1;
+        totalMRR += client.mrr;
+        totalOneTimeRevenue += client.oneTimeRevenue;
+        totalSeats += client.seatCount || 0;
+
+        const partner = client.salesPartner || 'Direct';
+        mrrByPartner[partner] = (mrrByPartner[partner] || 0) + client.mrr;
+        clientsByPartner[partner] = (clientsByPartner[partner] || 0) + 1;
+      }
+
+      if (isSubscriber) {
+        subscriberCount += 1;
+        if (isActive) {
+          activeSubscriberCount += 1;
+          subscriberMRRTotal += client.mrr;
+        }
+      }
+
+      if (isOneTimeClient) {
+        oneTimeClientCount += 1;
+        oneTimeRevenueTotal += client.oneTimeRevenue;
+        if (isActive) {
+          activeOneTimeClientCount += 1;
+        }
+      }
     }
-
-    // Subscriber vs One-Time breakdown
-    const subscribers = clients.filter((c) => c.pricingModel === 'per_seat' || c.pricingModel === 'flat_mrr');
-    const activeSubscribers = subscribers.filter((c) => c.status === 'active');
-    const oneTimeClients = clients.filter((c) => c.pricingModel === 'one_time_only');
-    const activeOneTimeClients = oneTimeClients.filter((c) => c.status === 'active');
-    const totalSeats = active.reduce((s, c) => s + (c.seatCount || 0), 0);
-    const avgMRRPerSubscriber = activeSubscribers.length > 0
-      ? activeSubscribers.reduce((s, c) => s + c.mrr, 0) / activeSubscribers.length : 0;
-    const avgOneTimePerClient = oneTimeClients.length > 0
-      ? oneTimeClients.reduce((s, c) => s + c.oneTimeRevenue, 0) / oneTimeClients.length : 0;
 
     // Receivables aggregation
     let totalReceivables = 0;
@@ -49,21 +68,21 @@ export function useDashboardMetrics(): DashboardMetrics {
     return {
       totalMRR,
       totalARR: totalMRR * 12,
-      activeClientCount: active.length,
+      activeClientCount,
       totalClients: clients.length,
       totalOneTimeRevenue,
-      avgRevenuePerClient: active.length > 0 ? totalMRR / active.length : 0,
+      avgRevenuePerClient: activeClientCount > 0 ? totalMRR / activeClientCount : 0,
       mrrByPartner,
       clientsByPartner,
       totalReceivables,
       receivablesPaid,
       receivablesPending,
-      subscriberCount: subscribers.length,
-      activeSubscriberCount: activeSubscribers.length,
-      oneTimeClientCount: oneTimeClients.length,
-      activeOneTimeClientCount: activeOneTimeClients.length,
-      avgMRRPerSubscriber,
-      avgOneTimePerClient,
+      subscriberCount,
+      activeSubscriberCount,
+      oneTimeClientCount,
+      activeOneTimeClientCount,
+      avgMRRPerSubscriber: activeSubscriberCount > 0 ? subscriberMRRTotal / activeSubscriberCount : 0,
+      avgOneTimePerClient: oneTimeClientCount > 0 ? oneTimeRevenueTotal / oneTimeClientCount : 0,
       totalSeats,
     };
   }, [clients, receivables]);

@@ -32,13 +32,46 @@ export default function ClientsPage() {
     });
   }, [clients, statusFilter, partnerFilter, search]);
 
-  const activeClients = clients.filter((c) => c.status === 'active');
-  const subscribers = clients.filter((c) => c.pricingModel === 'per_seat' || c.pricingModel === 'flat_mrr');
-  const activeSubscribers = subscribers.filter((c) => c.status === 'active');
-  const oneTimeClients = clients.filter((c) => c.pricingModel === 'one_time_only');
-  const activeOneTimeClients = oneTimeClients.filter((c) => c.status === 'active');
-  const totalMRR = activeClients.reduce((sum, c) => sum + c.mrr, 0);
-  const totalOneTime = clients.reduce((sum, c) => sum + c.oneTimeRevenue, 0);
+  const summary = useMemo(() => {
+    let activeClients = 0;
+    let subscribers = 0;
+    let activeSubscribers = 0;
+    let oneTimeClients = 0;
+    let activeOneTimeClients = 0;
+    let totalMRR = 0;
+    let totalOneTime = 0;
+
+    for (const client of clients) {
+      const isActive = client.status === 'active';
+      const isSubscriber = client.pricingModel === 'per_seat' || client.pricingModel === 'flat_mrr';
+      const isOneTime = client.pricingModel === 'one_time_only';
+
+      totalOneTime += client.oneTimeRevenue;
+
+      if (isActive) {
+        activeClients += 1;
+        totalMRR += client.mrr;
+      }
+      if (isSubscriber) {
+        subscribers += 1;
+        if (isActive) activeSubscribers += 1;
+      }
+      if (isOneTime) {
+        oneTimeClients += 1;
+        if (isActive) activeOneTimeClients += 1;
+      }
+    }
+
+    return {
+      activeClients,
+      subscribers,
+      activeSubscribers,
+      oneTimeClients,
+      activeOneTimeClients,
+      totalMRR,
+      totalOneTime,
+    };
+  }, [clients]);
 
   function handleSave(client: Client) {
     const existing = clients.find((c) => c.id === client.id);
@@ -80,7 +113,7 @@ export default function ClientsPage() {
   return (
     <PageShell
       title="Clients"
-      subtitle={`${clients.length} clients · ${activeClients.length} active`}
+      subtitle={`${clients.length} clients · ${summary.activeClients} active`}
       actions={
         <button
           style={{
@@ -102,12 +135,12 @@ export default function ClientsPage() {
     >
       {/* Summary KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
-        <KPICard title="Subscribers" value={formatNumber(subscribers.length)} subtitle={`${activeSubscribers.length} active`} accent="#00c853" />
-        <KPICard title="One-Time Clients" value={formatNumber(oneTimeClients.length)} subtitle={`${activeOneTimeClients.length} active`} accent="#fbbf24" />
-        <KPICard title="Total Clients" value={formatNumber(clients.length)} subtitle={`${activeClients.length} active`} accent="#2979ff" />
-        <KPICard title="Subscription MRR" value={formatAED(totalMRR)} accent="#00c853" />
-        <KPICard title="One-Time Revenue" value={formatAED(totalOneTime)} accent="#fbbf24" />
-        <KPICard title="Revenue Quality" value={`${(totalMRR + totalOneTime) > 0 ? ((totalMRR / (totalMRR + totalOneTime)) * 100).toFixed(0) : 0}%`} subtitle="recurring" accent="#10b981" />
+        <KPICard title="Subscribers" value={formatNumber(summary.subscribers)} subtitle={`${summary.activeSubscribers} active`} accent="#00c853" />
+        <KPICard title="One-Time Clients" value={formatNumber(summary.oneTimeClients)} subtitle={`${summary.activeOneTimeClients} active`} accent="#fbbf24" />
+        <KPICard title="Total Clients" value={formatNumber(clients.length)} subtitle={`${summary.activeClients} active`} accent="#2979ff" />
+        <KPICard title="Subscription MRR" value={formatAED(summary.totalMRR)} accent="#00c853" />
+        <KPICard title="One-Time Revenue" value={formatAED(summary.totalOneTime)} accent="#fbbf24" />
+        <KPICard title="Revenue Quality" value={`${(summary.totalMRR + summary.totalOneTime) > 0 ? ((summary.totalMRR / (summary.totalMRR + summary.totalOneTime)) * 100).toFixed(0) : 0}%`} subtitle="recurring" accent="#10b981" />
       </div>
 
       {/* Filter Bar */}

@@ -40,19 +40,41 @@ export default function SalesGoalsPage() {
     currentSubscribers, currentOneTimeClients,
     totalOneTimeRevenue,
   } = useMemo(() => {
-    const activeClients = clients.filter((c) => c.status === 'active');
-    const currentCount = activeClients.length;
+    let currentCount = 0;
+    let totalMRR = 0;
+    let totalOneTime = 0;
+    let activeSubs = 0;
+    let subscriberMRRTotal = 0;
+    let totalOneTimeClients = 0;
+    let totalOneTimeClientRevenue = 0;
+
+    for (const client of clients) {
+      const isActive = client.status === 'active';
+      const isSubscriber = client.pricingModel === 'per_seat' || client.pricingModel === 'flat_mrr';
+      const isOneTimeClient = client.pricingModel === 'one_time_only';
+
+      totalOneTime += client.oneTimeRevenue;
+
+      if (isActive) {
+        currentCount += 1;
+        totalMRR += client.mrr;
+      }
+      if (isSubscriber) {
+        if (isActive) {
+          activeSubs += 1;
+          subscriberMRRTotal += client.mrr;
+        }
+      }
+      if (isOneTimeClient) {
+        totalOneTimeClients += 1;
+        totalOneTimeClientRevenue += client.oneTimeRevenue;
+      }
+    }
+
     const target = 50;
 
-    // Subscriber vs one-time breakdown
-    const subs = clients.filter((c) => c.pricingModel === 'per_seat' || c.pricingModel === 'flat_mrr');
-    const activeSubs = subs.filter((c) => c.status === 'active');
-    const otClients = clients.filter((c) => c.pricingModel === 'one_time_only');
-
-    const totalMRR = activeClients.reduce((sum, c) => sum + c.mrr, 0);
-    const totalOneTime = clients.reduce((sum, c) => sum + c.oneTimeRevenue, 0);
-    const avgMRR = activeSubs.length > 0 ? activeSubs.reduce((s, c) => s + c.mrr, 0) / activeSubs.length : 0;
-    const avgOT = otClients.length > 0 ? otClients.reduce((s, c) => s + c.oneTimeRevenue, 0) / otClients.length : 0;
+    const avgMRR = activeSubs > 0 ? subscriberMRRTotal / activeSubs : 0;
+    const avgOT = totalOneTimeClients > 0 ? totalOneTimeClientRevenue / totalOneTimeClients : 0;
 
     const monthsRemaining = 11;
     const gap = target - currentCount;
@@ -94,23 +116,27 @@ export default function SalesGoalsPage() {
       avgOneTimePerClient: avgOT,
       projectedMRR50: target * avgMRR,
       projectedARR50: target * avgMRR * 12,
-      currentSubscribers: activeSubs.length,
-      currentOneTimeClients: otClients.length,
+      currentSubscribers: activeSubs,
+      currentOneTimeClients: totalOneTimeClients,
       totalOneTimeRevenue: totalOneTime,
     };
   }, [clients]);
 
   const { totalMonthlyCost, costBreakdown } = useMemo(() => {
-    const actualCosts = costs.filter((c) => c.type === 'actual');
-    const total = actualCosts.reduce((sum, c) => sum + c.amount, 0);
+    let total = 0;
+    const byCategoryTotals: Partial<Record<CostCategory, number>> = {};
+
+    for (const cost of costs) {
+      if (cost.type !== 'actual') continue;
+      total += cost.amount;
+      byCategoryTotals[cost.category] = (byCategoryTotals[cost.category] || 0) + cost.amount;
+    }
 
     const byCategory: { category: CostCategory; label: string; amount: number; color: string }[] = [];
     const categories: CostCategory[] = ['aws', 'chatwoot_seats', 'payroll', 'sales_spend', 'chatwoot_sub', 'commissions'];
 
     for (const cat of categories) {
-      const amount = actualCosts
-        .filter((c) => c.category === cat)
-        .reduce((sum, c) => sum + c.amount, 0);
+      const amount = byCategoryTotals[cat] || 0;
       if (amount > 0) {
         byCategory.push({
           category: cat,

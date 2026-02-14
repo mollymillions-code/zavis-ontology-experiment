@@ -94,26 +94,56 @@ export default function TrendsPage() {
 
   /* ========== Live metrics ========== */
   const metrics = useMemo(() => {
-    const active = clients.filter((c) => c.status === 'active');
-    // Subscriber = has recurring revenue (per_seat or flat_mrr)
-    const subscribers = clients.filter((c) => c.pricingModel === 'per_seat' || c.pricingModel === 'flat_mrr');
-    const activeSubscribers = subscribers.filter((c) => c.status === 'active');
-    const inactiveSubscribers = subscribers.filter((c) => c.status === 'inactive');
+    let activeCount = 0;
+    let subscriberCount = 0;
+    let activeSubscriberCount = 0;
+    let inactiveSubscriberCount = 0;
+    let oneTimeClientCount = 0;
+    let activeOneTimeCount = 0;
+    let inactiveOneTimeCount = 0;
+    let subscriptionMRR = 0;
+    let totalOneTimeRevenue = 0;
+    let totalSeats = 0;
+    let activeSubscriberMRR = 0;
+    let oneTimeRevenueTotal = 0;
 
-    // One-time = pricingModel is one_time_only
-    const oneTimeClients = clients.filter((c) => c.pricingModel === 'one_time_only');
-    const activeOneTimeClients = oneTimeClients.filter((c) => c.status === 'active');
-    const inactiveOneTimeClients = oneTimeClients.filter((c) => c.status === 'inactive');
+    for (const client of clients) {
+      const isActive = client.status === 'active';
+      const isSubscriber = client.pricingModel === 'per_seat' || client.pricingModel === 'flat_mrr';
+      const isOneTimeClient = client.pricingModel === 'one_time_only';
 
-    // Revenue breakdown
-    const subscriptionMRR = active.reduce((s, c) => s + c.mrr, 0);
+      totalOneTimeRevenue += client.oneTimeRevenue;
+
+      if (isActive) {
+        activeCount += 1;
+        subscriptionMRR += client.mrr;
+        totalSeats += client.seatCount || 0;
+      }
+
+      if (isSubscriber) {
+        subscriberCount += 1;
+        if (isActive) {
+          activeSubscriberCount += 1;
+          activeSubscriberMRR += client.mrr;
+        } else {
+          inactiveSubscriberCount += 1;
+        }
+      }
+
+      if (isOneTimeClient) {
+        oneTimeClientCount += 1;
+        oneTimeRevenueTotal += client.oneTimeRevenue;
+        if (isActive) {
+          activeOneTimeCount += 1;
+        } else {
+          inactiveOneTimeCount += 1;
+        }
+      }
+    }
+
     const totalARR = subscriptionMRR * 12;
-    const totalOneTimeRevenue = clients.reduce((s, c) => s + c.oneTimeRevenue, 0);
-    const totalSeats = active.reduce((s, c) => s + (c.seatCount || 0), 0);
-    const avgMRRPerSubscriber = activeSubscribers.length > 0
-      ? activeSubscribers.reduce((s, c) => s + c.mrr, 0) / activeSubscribers.length : 0;
-    const avgOneTimePerClient = oneTimeClients.length > 0
-      ? oneTimeClients.reduce((s, c) => s + c.oneTimeRevenue, 0) / oneTimeClients.length : 0;
+    const avgMRRPerSubscriber = activeSubscriberCount > 0 ? activeSubscriberMRR / activeSubscriberCount : 0;
+    const avgOneTimePerClient = oneTimeClientCount > 0 ? oneTimeRevenueTotal / oneTimeClientCount : 0;
 
     // Total revenue = subscription ARR + one-time
     const totalRevenue = subscriptionMRR + totalOneTimeRevenue;
@@ -121,19 +151,21 @@ export default function TrendsPage() {
 
     return {
       subscriptionMRR, totalARR, totalOneTimeRevenue, totalRevenue, subscriptionShare,
-      activeCount: active.length, totalClients: clients.length,
+      activeCount, totalClients: clients.length,
       totalSeats,
       // Client breakdown
-      subscriberCount: subscribers.length,
-      activeSubscriberCount: activeSubscribers.length,
-      inactiveSubscriberCount: inactiveSubscribers.length,
-      oneTimeClientCount: oneTimeClients.length,
-      activeOneTimeCount: activeOneTimeClients.length,
-      inactiveOneTimeCount: inactiveOneTimeClients.length,
+      subscriberCount,
+      activeSubscriberCount,
+      inactiveSubscriberCount,
+      oneTimeClientCount,
+      activeOneTimeCount,
+      inactiveOneTimeCount,
       // Averages
       avgMRRPerSubscriber, avgOneTimePerClient,
     };
   }, [clients]);
+
+  const activeClients = useMemo(() => clients.filter((c) => c.status === 'active'), [clients]);
 
   /* ========== Snapshot-derived ========== */
   const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
@@ -156,49 +188,64 @@ export default function TrendsPage() {
     [snapshots]
   );
 
-  /* ========== Chart 2: Revenue by Partner (donut) ========== */
-  const partnerRevenueData = useMemo(() => {
-    const byPartner: Record<string, number> = {};
-    clients.filter((c) => c.status === 'active').forEach((c) => {
-      const p = c.salesPartner || 'Direct';
-      byPartner[p] = (byPartner[p] || 0) + c.mrr;
-    });
-    return Object.entries(byPartner)
-      .map(([name, value]) => ({ name, value, fill: PARTNER_COLORS[name] || '#94a3b8' }))
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value);
-  }, [clients]);
+  const { partnerRevenueData, planDistribution, topClients, partnerActiveStats } = useMemo(() => {
+    const partnerRevenue = new Map<string, number>();
+    const partnerClientCounts = new Map<string, number>();
+    const byPlan = new Map<string, { count: number; mrr: number }>();
+    const topCandidates: Array<{ name: string; mrr: number; partner: string; fill: string }> = [];
 
-  /* ========== Chart 4: Plan Distribution (donut) ========== */
-  const planDistribution = useMemo(() => {
-    const byPlan: Record<string, { count: number; mrr: number }> = {};
-    clients.filter((c) => c.status === 'active').forEach((c) => {
-      const plan = c.plan || 'NA';
-      if (!byPlan[plan]) byPlan[plan] = { count: 0, mrr: 0 };
-      byPlan[plan].count += 1;
-      byPlan[plan].mrr += c.mrr;
-    });
-    return Object.entries(byPlan)
+    for (const client of activeClients) {
+      const partner = client.salesPartner || 'Direct';
+      partnerRevenue.set(partner, (partnerRevenue.get(partner) || 0) + client.mrr);
+      partnerClientCounts.set(partner, (partnerClientCounts.get(partner) || 0) + 1);
+
+      const plan = client.plan || 'NA';
+      const planStats = byPlan.get(plan) || { count: 0, mrr: 0 };
+      planStats.count += 1;
+      planStats.mrr += client.mrr;
+      byPlan.set(plan, planStats);
+
+      if (client.mrr > 0) {
+        topCandidates.push({
+          name: client.name,
+          mrr: client.mrr,
+          partner,
+          fill: PARTNER_COLORS[partner] || '#94a3b8',
+        });
+      }
+    }
+
+    const partnerRevenueData = Array.from(partnerRevenue.entries())
+      .map(([name, value]) => ({ name, value, fill: PARTNER_COLORS[name] || '#94a3b8' }))
+      .sort((a, b) => b.value - a.value);
+
+    const planDistribution = Array.from(byPlan.entries())
       .map(([name, { count, mrr }]) => ({
-        name, count, mrr,
+        name,
+        count,
+        mrr,
         fill: PLAN_COLORS[name] || '#94a3b8',
       }))
       .sort((a, b) => b.mrr - a.mrr);
-  }, [clients]);
 
-  /* ========== Chart 5: Top Clients by MRR (horizontal bar) ========== */
-  const topClients = useMemo(() => {
-    return clients
-      .filter((c) => c.status === 'active' && c.mrr > 0)
+    const topClients = topCandidates
       .sort((a, b) => b.mrr - a.mrr)
       .slice(0, 8)
       .map((c) => ({
-        name: c.name.length > 20 ? c.name.slice(0, 18) + '...' : c.name,
-        mrr: c.mrr,
-        partner: c.salesPartner || 'Direct',
-        fill: PARTNER_COLORS[c.salesPartner || 'Direct'] || '#94a3b8',
+        ...c,
+        name: c.name.length > 20 ? `${c.name.slice(0, 18)}...` : c.name,
       }));
-  }, [clients]);
+
+    const partnerActiveStats = new Map<string, { mrr: number; clients: number }>();
+    partnerRevenue.forEach((mrr, partner) => {
+      partnerActiveStats.set(partner, {
+        mrr,
+        clients: partnerClientCounts.get(partner) || 0,
+      });
+    });
+
+    return { partnerRevenueData, planDistribution, topClients, partnerActiveStats };
+  }, [activeClients]);
 
   /* ========== Chart 6: MRR by Partner over time (stacked area) ========== */
   const partnerNames = useMemo(() => {
@@ -219,12 +266,18 @@ export default function TrendsPage() {
   const commissionSummary = useMemo(() => {
     const partners = getAllPartners();
     return partners.map((p) => {
-      const partnerClients = clients.filter((c) => c.salesPartner === p.name && c.status === 'active');
-      const partnerMRR = partnerClients.reduce((s, c) => s + c.mrr, 0);
+      const partnerStats = partnerActiveStats.get(p.name);
+      const partnerMRR = partnerStats?.mrr || 0;
       const monthlyCommission = (partnerMRR * p.commissionPercentage) / 100;
-      return { name: p.name, mrr: partnerMRR, clients: partnerClients.length, rate: p.commissionPercentage, commission: monthlyCommission };
+      return {
+        name: p.name,
+        mrr: partnerMRR,
+        clients: partnerStats?.clients || 0,
+        rate: p.commissionPercentage,
+        commission: monthlyCommission,
+      };
     }).filter((p) => p.mrr > 0);
-  }, [clients, getAllPartners]);
+  }, [getAllPartners, partnerActiveStats]);
 
   return (
     <PageShell
