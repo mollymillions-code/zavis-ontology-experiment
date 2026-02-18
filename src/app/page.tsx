@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
 import RevenueDonut from '@/components/charts/RevenueDonut';
@@ -8,6 +8,7 @@ import CustomerRevenueBar from '@/components/charts/CustomerRevenueBar';
 import StatusBadge from '@/components/customers/StatusBadge';
 import { PartnerBadge } from '@/components/customers/PartnerBadge';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useMonthlyCosts } from '@/hooks/useMonthlyCosts';
 import { useClientStore } from '@/lib/store/customer-store';
 import { useSnapshotStore } from '@/lib/store/snapshot-store';
 import { formatAED, formatNumber, formatDeltaAED } from '@/lib/utils/currency';
@@ -62,9 +63,18 @@ const COMPOSITION_GRADIENTS: Record<string, string> = {
   'One-Time': 'url(#comp-onetime)',
 };
 
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtMonth(m: string) {
+  const [y, mo] = m.split('-');
+  return `${MONTH_SHORT[parseInt(mo, 10) - 1]} '${y.slice(2)}`;
+}
+
 export default function DashboardPage() {
   const metrics = useDashboardMetrics();
   const clients = useClientStore((s) => s.clients);
+  const receivables = useClientStore((s) => s.receivables);
+  const { costs: monthlyCosts, loading: costsLoading } = useMonthlyCosts();
+  const [cashFlowView, setCashFlowView] = useState<'actual' | 'projected'>('actual');
   const latestSnapshot = useSnapshotStore((s) => s.getLatestSnapshot());
   const currentMonth = new Date().toISOString().slice(0, 7);
   const previousSnapshot = useSnapshotStore((s) => s.getPreviousSnapshot(latestSnapshot?.month || currentMonth));
@@ -136,6 +146,30 @@ export default function DashboardPage() {
         return { ...c, concentrationPct };
       });
   }, [clients, metrics.totalMRR]);
+
+  // Cash Flow pivot data
+  const cashFlowData = useMemo(() => {
+    // Collect all months from both receivables and costs
+    const monthSet = new Set<string>();
+    for (const r of receivables) monthSet.add(r.month);
+    for (const c of monthlyCosts) monthSet.add(c.month);
+    const months = Array.from(monthSet).sort();
+
+    return months.map((m) => {
+      // IN: receivables per month
+      const inAmount = receivables
+        .filter((r) => r.month === m && (cashFlowView === 'actual' ? r.status === 'paid' : true))
+        .reduce((s, r) => s + r.amount, 0);
+
+      // OUT: costs per month
+      const outAmount = monthlyCosts
+        .filter((c) => c.month === m && c.type === cashFlowView)
+        .reduce((s, c) => s + c.amount, 0);
+
+      const net = inAmount - outAmount;
+      return { month: m, label: fmtMonth(m), inAmount, outAmount, net };
+    });
+  }, [receivables, monthlyCosts, cashFlowView]);
 
   return (
     <PageShell
@@ -469,6 +503,249 @@ export default function DashboardPage() {
             </tfoot>
           </table>
         </div>
+      </div>
+
+      {/* ===== CASH FLOW OVERVIEW ===== */}
+      <div style={{ ...cardStyle, marginTop: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h3 style={{ ...sectionTitle, marginBottom: 0 }}>Cash Flow Overview</h3>
+          {/* Actual / Projected toggle */}
+          <div style={{ display: 'flex', gap: 4, background: '#f0ebe0', borderRadius: 10, padding: 4 }}>
+            {(['actual', 'projected'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setCashFlowView(v)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: cashFlowView === v ? '#ffffff' : 'transparent',
+                  color: cashFlowView === v ? '#1a1a1a' : '#666',
+                  fontWeight: cashFlowView === v ? 700 : 500,
+                  fontSize: 12,
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: 'pointer',
+                  boxShadow: cashFlowView === v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {v === 'actual' ? 'Actual' : 'Projected'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {costsLoading ? (
+          <div style={{
+            height: 120,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#fafaf8',
+            borderRadius: 10,
+            border: '1px solid #e0dbd2',
+          }}>
+            <p style={{ fontSize: 12, color: '#999', fontFamily: "'DM Sans', sans-serif" }}>
+              Loading cost data…
+            </p>
+          </div>
+        ) : cashFlowData.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center' }}>
+            <p style={{ fontSize: 12, color: '#999', fontFamily: "'DM Sans', sans-serif" }}>No cash flow data available.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: cashFlowData.length * 90 + 200 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
+                  <th style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 600,
+                    color: '#666',
+                    textTransform: 'uppercase',
+                    fontSize: 10,
+                    letterSpacing: 0.5,
+                    fontFamily: "'DM Sans', sans-serif",
+                    whiteSpace: 'nowrap',
+                    position: 'sticky',
+                    left: 0,
+                    background: '#fff',
+                    zIndex: 2,
+                    minWidth: 160,
+                  }}>
+                    Flow
+                  </th>
+                  {cashFlowData.map((d) => (
+                    <th key={d.month} style={{
+                      padding: '10px 8px',
+                      textAlign: 'right',
+                      fontWeight: 600,
+                      color: '#666',
+                      fontSize: 9,
+                      letterSpacing: 0.3,
+                      fontFamily: "'Space Mono', monospace",
+                      whiteSpace: 'nowrap',
+                      minWidth: 90,
+                    }}>
+                      {d.label}
+                    </th>
+                  ))}
+                  <th style={{
+                    padding: '10px 12px',
+                    textAlign: 'right',
+                    fontWeight: 700,
+                    color: '#1a1a1a',
+                    fontSize: 10,
+                    letterSpacing: 0.5,
+                    fontFamily: "'DM Sans', sans-serif",
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    borderLeft: '2px solid #e0dbd2',
+                    minWidth: 100,
+                  }}>
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* IN — Receivables */}
+                <tr style={{ borderBottom: '1px solid #e0dbd2', background: '#fafaf8' }}>
+                  <td style={{
+                    padding: '10px 12px',
+                    fontWeight: 600,
+                    color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 11,
+                    whiteSpace: 'nowrap',
+                    position: 'sticky',
+                    left: 0,
+                    background: '#fafaf8',
+                    zIndex: 1,
+                  }}>
+                    <span style={{ marginRight: 6, fontSize: 9, fontWeight: 700, color: '#00a844', background: 'rgba(0,168,68,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: "'DM Sans', sans-serif" }}>IN</span>
+                    Receivables
+                  </td>
+                  {cashFlowData.map((d) => (
+                    <td key={d.month} style={{
+                      padding: '10px 8px',
+                      textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: '#00a844',
+                      background: d.inAmount > 0 ? 'rgba(0,168,68,0.06)' : undefined,
+                    }}>
+                      {d.inAmount > 0 ? formatAED(d.inAmount, 0) : '—'}
+                    </td>
+                  ))}
+                  <td style={{
+                    padding: '10px 12px',
+                    textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    color: '#00a844',
+                    borderLeft: '2px solid #e0dbd2',
+                  }}>
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.inAmount, 0), 0)}
+                  </td>
+                </tr>
+
+                {/* OUT — Costs */}
+                <tr style={{ borderBottom: '1px solid #e0dbd2', background: '#ffffff' }}>
+                  <td style={{
+                    padding: '10px 12px',
+                    fontWeight: 600,
+                    color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 11,
+                    whiteSpace: 'nowrap',
+                    position: 'sticky',
+                    left: 0,
+                    background: '#ffffff',
+                    zIndex: 1,
+                  }}>
+                    <span style={{ marginRight: 6, fontSize: 9, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: "'DM Sans', sans-serif" }}>OUT</span>
+                    Costs
+                  </td>
+                  {cashFlowData.map((d) => (
+                    <td key={d.month} style={{
+                      padding: '10px 8px',
+                      textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: '#dc2626',
+                      background: d.outAmount > 0 ? 'rgba(239,68,68,0.06)' : undefined,
+                    }}>
+                      {d.outAmount > 0 ? formatAED(d.outAmount, 0) : '—'}
+                    </td>
+                  ))}
+                  <td style={{
+                    padding: '10px 12px',
+                    textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    color: '#dc2626',
+                    borderLeft: '2px solid #e0dbd2',
+                  }}>
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.outAmount, 0), 0)}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                {/* NET row */}
+                <tr style={{ borderTop: '2px solid #e0dbd2', background: '#f5f0e8' }}>
+                  <td style={{
+                    padding: '12px 12px',
+                    fontWeight: 700,
+                    color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 12,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    position: 'sticky',
+                    left: 0,
+                    background: '#f5f0e8',
+                    zIndex: 1,
+                  }}>
+                    NET
+                  </td>
+                  {cashFlowData.map((d) => (
+                    <td key={d.month} style={{
+                      padding: '12px 8px',
+                      textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: d.net >= 0 ? '#00a844' : '#dc2626',
+                    }}>
+                      {formatAED(d.net, 0)}
+                    </td>
+                  ))}
+                  <td style={{
+                    padding: '12px 12px',
+                    textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: cashFlowData.reduce((s, d) => s + d.net, 0) >= 0 ? '#00a844' : '#dc2626',
+                    borderLeft: '2px solid #e0dbd2',
+                  }}>
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.net, 0), 0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+        <p style={{ fontSize: 10, color: '#aaa', fontFamily: "'DM Sans', sans-serif", marginTop: 12, fontStyle: 'italic' }}>
+          {cashFlowView === 'actual'
+            ? 'Actual: paid receivables vs actual costs'
+            : 'Projected: all receivables vs projected costs'}
+        </p>
       </div>
     </PageShell>
   );
