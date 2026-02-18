@@ -410,26 +410,6 @@ export default function CostsPage() {
           </h2>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
-              onClick={() => setShowAddForm((v) => !v)}
-              style={{
-                background: showAddForm ? 'rgba(255,255,255,0.1)' : 'rgba(96,165,250,0.15)',
-                border: '1px solid rgba(96,165,250,0.3)',
-                borderRadius: 8,
-                padding: '8px 14px',
-                color: '#60a5fa',
-                fontFamily: 'DM Sans, sans-serif',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              {showAddForm ? <X size={14} /> : <Plus size={14} />}
-              {showAddForm ? 'Cancel' : 'Add Cost Entry'}
-            </button>
-            <button
               onClick={handleSave}
               disabled={!hasEdits || saving}
               style={{
@@ -452,234 +432,6 @@ export default function CostsPage() {
             </button>
           </div>
         </div>
-
-        {/* Add Cost Form */}
-        {showAddForm && (
-          <div
-            style={{
-              marginBottom: 24,
-              padding: 20,
-              background: 'rgba(96,165,250,0.06)',
-              border: '1px solid rgba(96,165,250,0.2)',
-              borderRadius: 12,
-            }}
-          >
-            <p
-              style={{
-                margin: '0 0 16px 0',
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#60a5fa',
-                fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              New Cost Entry — {formatMonthLabel(selectedMonth)}
-            </p>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.4)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    marginBottom: 6,
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  Category
-                </label>
-                <select
-                  value={addForm.category}
-                  onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 6,
-                    padding: '8px 10px',
-                    color: '#ffffff',
-                    fontFamily: 'DM Sans, sans-serif',
-                    fontSize: 13,
-                  }}
-                >
-                  {ALL_CATEGORIES.map((c) => (
-                    <option key={c} value={c} style={{ background: '#1a1a2e' }}>
-                      {COST_CATEGORY_LABELS[c]}
-                    </option>
-                  ))}
-                  <option value="__custom__" style={{ background: '#1a1a2e' }}>
-                    + Custom Category
-                  </option>
-                </select>
-                {addForm.category === '__custom__' && (
-                  <input
-                    type="text"
-                    placeholder="Enter category name"
-                    value={addForm.customCategory}
-                    onChange={(e) =>
-                      setAddForm((f) => ({ ...f, customCategory: e.target.value }))
-                    }
-                    style={{
-                      marginTop: 8,
-                      width: '100%',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      color: '#ffffff',
-                      fontFamily: 'DM Sans, sans-serif',
-                      fontSize: 13,
-                      boxSizing: 'border-box' as const,
-                    }}
-                  />
-                )}
-              </div>
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.4)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    marginBottom: 6,
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  Type
-                </label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {(['actual', 'projected'] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setAddForm((f) => ({ ...f, type: t }))}
-                      style={{
-                        flex: 1,
-                        padding: '8px 0',
-                        borderRadius: 6,
-                        border:
-                          addForm.type === t
-                            ? '1px solid rgba(0,200,83,0.5)'
-                            : '1px solid rgba(255,255,255,0.1)',
-                        background:
-                          addForm.type === t
-                            ? 'rgba(0,200,83,0.15)'
-                            : 'rgba(255,255,255,0.04)',
-                        color: addForm.type === t ? '#00c853' : 'rgba(255,255,255,0.5)',
-                        fontFamily: 'DM Sans, sans-serif',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {t === 'actual' ? 'Actual' : 'Projected'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.4)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    marginBottom: 6,
-                    fontFamily: 'DM Sans, sans-serif',
-                  }}
-                >
-                  Amount (AED)
-                </label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={addForm.amount}
-                  onChange={(e) => setAddForm((f) => ({ ...f, amount: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 6,
-                    padding: '8px 10px',
-                    color: '#ffffff',
-                    fontFamily: 'Space Mono, monospace',
-                    fontSize: 13,
-                    textAlign: 'right',
-                    boxSizing: 'border-box' as const,
-                  }}
-                />
-              </div>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.4)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  marginBottom: 6,
-                  fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                Particulars / Notes
-              </label>
-              <textarea
-                placeholder="e.g. 3+2+5 seats, staff compensation, sales expenses..."
-                value={addForm.notes}
-                onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
-                rows={2}
-                style={{
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 6,
-                  padding: '8px 10px',
-                  color: 'rgba(255,255,255,0.8)',
-                  fontFamily: 'DM Sans, sans-serif',
-                  fontSize: 13,
-                  resize: 'vertical',
-                  boxSizing: 'border-box' as const,
-                }}
-              />
-            </div>
-            <button
-              onClick={handleAddCost}
-              disabled={addingCost || !addForm.amount}
-              style={{
-                background: addForm.amount ? '#60a5fa' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 20px',
-                color: '#ffffff',
-                fontFamily: 'DM Sans, sans-serif',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: addForm.amount ? 'pointer' : 'not-allowed',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <Plus size={14} />
-              {addingCost ? 'Adding...' : 'Add Cost'}
-            </button>
-          </div>
-        )}
 
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -894,6 +646,116 @@ export default function CostsPage() {
                 {formatAED(totalActual * 12)}
               </td>
             </tr>
+
+            {/* ── Inline Add Row ── */}
+            {!showAddForm ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '12px 8px' }}>
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                      padding: '10px 12px', borderRadius: 8,
+                      border: '1px dashed rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.04)',
+                      color: '#60a5fa', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+                      fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(96,165,250,0.1)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(96,165,250,0.04)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)'; }}
+                  >
+                    <Plus size={14} />
+                    Add Cost Entry
+                  </button>
+                </td>
+              </tr>
+            ) : (
+              <tr style={{ background: 'rgba(96,165,250,0.06)', borderTop: '1px solid rgba(96,165,250,0.2)' }}>
+                <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                  {addForm.category === '__custom__' ? (
+                    <input
+                      type="text" placeholder="Category name" autoFocus
+                      value={addForm.customCategory}
+                      onChange={(e) => setAddForm((f) => ({ ...f, customCategory: e.target.value }))}
+                      style={{
+                        width: '100%', background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+                        padding: '8px 10px', color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+                      }}
+                    />
+                  ) : (
+                    <select
+                      value={addForm.category}
+                      onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
+                      style={{
+                        width: '100%', background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+                        padding: '8px 10px', color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+                      }}
+                    >
+                      {ALL_CATEGORIES.map((c) => (
+                        <option key={c} value={c} style={{ background: '#1a1a2e' }}>{COST_CATEGORY_LABELS[c]}</option>
+                      ))}
+                      <option value="__custom__" style={{ background: '#1a1a2e' }}>+ Custom</option>
+                    </select>
+                  )}
+                </td>
+                <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                  <input
+                    type="text" placeholder="Add particulars..."
+                    value={addForm.notes}
+                    onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
+                    style={{
+                      width: '100%', background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
+                      padding: '8px 10px', color: 'rgba(255,255,255,0.7)',
+                      fontFamily: 'DM Sans, sans-serif', fontSize: 12,
+                    }}
+                  />
+                </td>
+                <td style={{ padding: '10px 8px', textAlign: 'right', verticalAlign: 'middle', color: 'rgba(255,255,255,0.25)', fontFamily: 'Space Mono, monospace', fontSize: 13 }}>
+                  —
+                </td>
+                <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                  <input
+                    type="number" placeholder="0.00"
+                    value={addForm.amount}
+                    onChange={(e) => setAddForm((f) => ({ ...f, amount: e.target.value }))}
+                    style={{
+                      width: '100%', background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+                      padding: '8px 10px', color: '#ffffff', fontFamily: 'Space Mono, monospace',
+                      fontSize: 13, textAlign: 'right', boxSizing: 'border-box' as const,
+                    }}
+                  />
+                </td>
+                <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => { setShowAddForm(false); setAddForm({ category: 'aws', customCategory: '', type: 'actual', amount: '', notes: '' }); }}
+                      style={{
+                        padding: '7px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'transparent', color: 'rgba(255,255,255,0.5)',
+                        fontFamily: 'DM Sans, sans-serif', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddCost}
+                      disabled={addingCost || !addForm.amount}
+                      style={{
+                        padding: '7px 18px', borderRadius: 6, border: 'none',
+                        background: addForm.amount ? '#00c853' : 'rgba(255,255,255,0.1)',
+                        color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 12,
+                        fontWeight: 700, cursor: addForm.amount ? 'pointer' : 'not-allowed',
+                      }}
+                    >
+                      {addingCost ? 'Adding...' : 'Done'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
