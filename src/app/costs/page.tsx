@@ -968,7 +968,15 @@ export default function CostsPage() {
         }}>
           Monthly Cost Flow
         </h2>
-        <CostsFlowTable costs={costs} />
+        <CostsFlowTable
+          costs={costs}
+          totalSeats={totalSeats}
+          onCostsUpdated={async () => {
+            const res = await fetch('/api/costs');
+            const data = await res.json();
+            setCosts(data);
+          }}
+        />
       </div>
     </PageShell>
   );
