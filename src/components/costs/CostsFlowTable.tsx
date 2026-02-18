@@ -222,8 +222,6 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
   // ── Totals ──
   const projMonthTotals: Record<string, number> = {};
   const actMonthTotals: Record<string, number> = {};
-  let projGrand = 0;
-  let actGrand = 0;
 
   for (const m of months) {
     let projSum = 0;
@@ -234,8 +232,6 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
     }
     projMonthTotals[m] = projSum;
     actMonthTotals[m] = actSum;
-    projGrand += projSum;
-    actGrand += actSum;
   }
 
   if (costs.length === 0) {
