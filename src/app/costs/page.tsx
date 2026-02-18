@@ -738,21 +738,7 @@ export default function CostsPage() {
                   letterSpacing: '0.5px',
                 }}
               >
-                Actual (AED)
-              </th>
-              <th
-                style={{
-                  textAlign: 'right',
-                  padding: '10px 8px',
-                  color: 'rgba(251,191,36,0.7)',
-                  fontFamily: 'DM Sans, sans-serif',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                Projected (AED)
+                Current Cost (AED)
               </th>
               <th
                 style={{
@@ -835,14 +821,6 @@ export default function CostsPage() {
                       style={inputStyle}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', verticalAlign: 'top' }}>
-                    <input
-                      type="number"
-                      value={projected}
-                      onChange={(e) => handleEdit(cat, 'projected', e.target.value)}
-                      style={{ ...inputStyle, borderColor: 'rgba(251,191,36,0.2)' }}
-                    />
-                  </td>
                   <td
                     style={{
                       padding: '12px 8px',
@@ -903,18 +881,6 @@ export default function CostsPage() {
                 }}
               >
                 {formatAED(totalActual)}
-              </td>
-              <td
-                style={{
-                  padding: '14px 8px',
-                  textAlign: 'right',
-                  color: '#fbbf24',
-                  fontFamily: 'Space Mono, monospace',
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                {formatAED(totalProjected)}
               </td>
               <td
                 style={{

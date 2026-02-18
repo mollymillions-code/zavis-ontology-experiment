@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/customers', label: 'Clients', icon: Users },
   { href: '/costs', label: 'Costs', icon: Wallet },
+  { href: '/payroll', label: 'Payroll', icon: Users },
   { href: '/receivables', label: 'Receivables', icon: Calculator },
   { href: '/invoices', label: 'Invoices', icon: FileText },
   { href: '/payments', label: 'Payments', icon: CreditCard },
