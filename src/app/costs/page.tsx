@@ -5,7 +5,7 @@ import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
 import CostsFlowTable from '@/components/costs/CostsFlowTable';
 import { formatAED } from '@/lib/utils/currency';
-import { Save, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { MonthlyCost, CostCategory } from '@/lib/models/platform-types';
 import { COST_CATEGORY_LABELS } from '@/lib/models/platform-types';
 import { useClientStore } from '@/lib/store/customer-store';
