@@ -110,24 +110,24 @@ export default function CostsPage() {
     return Array.from(combined);
   }, [monthCosts]);
 
-  function getCostAmount(category: string, type: 'actual' | 'projected'): number {
+  function getCostAmount(category: string, type: 'actual'): number {
     const key = `${category}-${type}`;
     if (editedValues[key] !== undefined) return editedValues[key];
     return costMap[key]?.amount || 0;
   }
 
-  function getCostNotes(category: string, type: 'actual' | 'projected'): string {
+  function getCostNotes(category: string, type: 'actual'): string {
     const key = `${category}-${type}`;
     if (editedNotes[key] !== undefined) return editedNotes[key];
     return costMap[key]?.notes || '';
   }
 
-  function handleEdit(category: string, type: 'actual' | 'projected', value: string) {
+  function handleEdit(category: string, type: 'actual', value: string) {
     const key = `${category}-${type}`;
     setEditedValues((prev) => ({ ...prev, [key]: parseFloat(value) || 0 }));
   }
 
-  function handleNotesEdit(category: string, type: 'actual' | 'projected', value: string) {
+  function handleNotesEdit(category: string, type: 'actual', value: string) {
     const key = `${category}-${type}`;
     setEditedNotes((prev) => ({ ...prev, [key]: value }));
   }
@@ -162,7 +162,7 @@ export default function CostsPage() {
       const updates = Array.from(changedKeys).flatMap((key) => {
         const dashIdx = key.lastIndexOf('-');
         const category = key.slice(0, dashIdx);
-        const type = key.slice(dashIdx + 1) as 'actual' | 'projected';
+        const type = key.slice(dashIdx + 1) as 'actual';
         const existing = costMap[key];
         const amountEdited = editedValues[key] !== undefined;
         const amount = amountEdited ? editedValues[key] : existing?.amount ?? 0;

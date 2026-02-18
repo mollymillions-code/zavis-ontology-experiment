@@ -18,5 +18,6 @@ export function isPerSeatClient(client: Client): boolean {
 /** Compute what MRR would be at a different per-seat price */
 export function computeMRRAtPrice(client: Client, newPerSeatPrice: number): number {
   if (!isPerSeatClient(client)) return client.mrr;
-  return newPerSeatPrice * (client.seatCount || 0);
+  const discount = client.discount || 0;
+  return newPerSeatPrice * (client.seatCount || 0) * (1 - discount / 100);
 }

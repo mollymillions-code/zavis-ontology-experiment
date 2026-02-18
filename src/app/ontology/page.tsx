@@ -79,7 +79,7 @@ export default function OntologyPage() {
       subtitle={`${objectTypes.length} object types · ${linkTypes.length} link types · ${actionTypes.length} actions`}
     >
       {/* Summary KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
         <KPICard title="Object Types" value={formatNumber(objectTypes.length)} subtitle="Defined" accent="#a78bfa" />
         <KPICard title="Link Types" value={formatNumber(linkTypes.length)} subtitle="Relationships" accent="#60a5fa" />
         <KPICard title="Action Types" value={formatNumber(actionTypes.length)} subtitle="Auditable mutations" accent="#00c853" />

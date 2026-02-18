@@ -5,6 +5,8 @@ import { useClientStore } from '@/lib/store/customer-store';
 import { useSnapshotStore } from '@/lib/store/snapshot-store';
 import { useWhatIfStore } from '@/lib/store/whatif-store';
 import { useOntologyStore } from '@/lib/store/ontology-store';
+import { useInvoiceStore } from '@/lib/store/invoice-store';
+import { usePartnerStore } from '@/lib/store/partner-store';
 
 const V3_MIGRATION_KEY = 'zavis-v3-migrated';
 const STALE_KEYS = [
@@ -29,6 +31,8 @@ export function useDbHydration() {
   const hydrateSnapshots = useSnapshotStore((s) => s.hydrateFromDb);
   const hydrateWhatIf = useWhatIfStore((s) => s.hydrateFromDb);
   const hydrateOntology = useOntologyStore((s) => s.hydrateFromDb);
+  const hydrateInvoices = useInvoiceStore((s) => s.hydrateFromDb);
+  const hydratePartners = usePartnerStore((s) => s.hydrateFromDb);
 
   useEffect(() => {
     if (hydrated.current) return;
@@ -38,5 +42,7 @@ export function useDbHydration() {
     hydrateSnapshots();
     hydrateWhatIf();
     hydrateOntology();
-  }, [hydrateClients, hydrateSnapshots, hydrateWhatIf, hydrateOntology]);
+    hydrateInvoices();
+    hydratePartners();
+  }, [hydrateClients, hydrateSnapshots, hydrateWhatIf, hydrateOntology, hydrateInvoices, hydratePartners]);
 }

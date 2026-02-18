@@ -5,10 +5,15 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const enriched = await getEnrichedCustomer(id);
-  if (!enriched) {
-    return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+  try {
+    const { id } = await params;
+    const enriched = await getEnrichedCustomer(id);
+    if (!enriched) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    }
+    return NextResponse.json(enriched);
+  } catch (error) {
+    console.error('Error fetching enriched customer:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
-  return NextResponse.json(enriched);
 }

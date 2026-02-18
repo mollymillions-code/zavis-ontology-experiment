@@ -86,7 +86,7 @@ export default function SalesPartnersPage() {
         totalOneTimeRevenue: totalOneTime,
         monthlyCommission: monthlyComm,
         oneTimeCommission: oneTimeComm,
-        annualCommission: monthlyComm * 12,
+        annualCommission: monthlyComm * 12 + oneTimeComm,
         clientBreakdown,
       };
     });

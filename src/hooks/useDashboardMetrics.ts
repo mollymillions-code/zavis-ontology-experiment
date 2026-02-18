@@ -46,9 +46,9 @@ export function useDashboardMetrics(): DashboardMetrics {
 
       if (isOneTimeClient) {
         oneTimeClientCount += 1;
-        oneTimeRevenueTotal += client.oneTimeRevenue;
         if (isActive) {
           activeOneTimeClientCount += 1;
+          oneTimeRevenueTotal += client.oneTimeRevenue;
         }
       }
     }
@@ -82,7 +82,7 @@ export function useDashboardMetrics(): DashboardMetrics {
       oneTimeClientCount,
       activeOneTimeClientCount,
       avgMRRPerSubscriber: activeSubscriberCount > 0 ? subscriberMRRTotal / activeSubscriberCount : 0,
-      avgOneTimePerClient: oneTimeClientCount > 0 ? oneTimeRevenueTotal / oneTimeClientCount : 0,
+      avgOneTimePerClient: activeOneTimeClientCount > 0 ? oneTimeRevenueTotal / activeOneTimeClientCount : 0,
       totalSeats,
     };
   }, [clients, receivables]);

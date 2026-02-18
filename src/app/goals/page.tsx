@@ -202,10 +202,10 @@ export default function SalesGoalsPage() {
         {/* Revenue Projection Chart */}
         <div style={{
           background: '#ffffff',
-          borderRadius: 16,
+          borderRadius: 12,
           padding: 24,
           border: '1px solid #e0dbd2',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
           <h3 style={{
             fontFamily: "'DM Sans', sans-serif",
@@ -229,19 +229,19 @@ export default function SalesGoalsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e0dbd2" />
               <XAxis
                 dataKey="shortMonth"
-                tick={{ fill: '#666', fontFamily: 'DM Sans, sans-serif', fontSize: 12 }}
+                tick={{ fill: '#666', fontFamily: "'DM Sans', sans-serif", fontSize: 12 }}
               />
               <YAxis
-                tick={{ fill: '#666', fontFamily: 'Space Mono, monospace', fontSize: 11 }}
+                tick={{ fill: '#666', fontFamily: "'Space Mono', monospace", fontSize: 11 }}
                 tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}K`}
-                label={{ value: 'AED', angle: -90, position: 'insideLeft', style: { fontFamily: 'DM Sans, sans-serif', fontSize: 12, fill: '#666' } }}
+                label={{ value: 'AED', angle: -90, position: 'insideLeft', style: { fontFamily: "'DM Sans', sans-serif", fontSize: 12, fill: '#666' } }}
               />
               <Tooltip
                 contentStyle={{
                   background: '#ffffff',
                   border: '1px solid #e0dbd2',
                   borderRadius: 8,
-                  fontFamily: 'DM Sans, sans-serif',
+                  fontFamily: "'DM Sans', sans-serif",
                   fontSize: 12,
                 }}
                 formatter={(value: number | undefined, name: string | undefined) => {
@@ -249,7 +249,7 @@ export default function SalesGoalsPage() {
                   return [formatAED(value), name];
                 }}
               />
-              <Legend wrapperStyle={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12 }} />
               <Bar dataKey="projectedMRR" fill="#60a5fa" name="Projected MRR" radius={[6, 6, 0, 0]} opacity={0.7} />
               <Line type="monotone" dataKey="projectedMRR" stroke="#1a1a1a" strokeWidth={2} dot={{ r: 3 }} name="MRR Trajectory" />
               {currentMRR > 0 && (
@@ -262,10 +262,10 @@ export default function SalesGoalsPage() {
         {/* Cost Breakdown Pie */}
         <div style={{
           background: '#ffffff',
-          borderRadius: 16,
+          borderRadius: 12,
           padding: 24,
           border: '1px solid #e0dbd2',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
           <h3 style={{
             fontFamily: "'DM Sans', sans-serif",
@@ -309,7 +309,7 @@ export default function SalesGoalsPage() {
                       background: '#ffffff',
                       border: '1px solid #e0dbd2',
                       borderRadius: 8,
-                      fontFamily: 'DM Sans, sans-serif',
+                      fontFamily: "'DM Sans', sans-serif",
                       fontSize: 12,
                     }}
                     formatter={(value: number | undefined) => {
@@ -347,10 +347,10 @@ export default function SalesGoalsPage() {
       {/* Client Growth Chart */}
       <div style={{
         background: '#ffffff',
-        borderRadius: 16,
+        borderRadius: 12,
         padding: 24,
         border: '1px solid #e0dbd2',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         marginBottom: 24,
       }}>
         <h3 style={{
@@ -375,19 +375,19 @@ export default function SalesGoalsPage() {
             <CartesianGrid strokeDasharray="3 3" stroke="#e0dbd2" />
             <XAxis
               dataKey="shortMonth"
-              tick={{ fill: '#666', fontFamily: 'DM Sans, sans-serif', fontSize: 12 }}
+              tick={{ fill: '#666', fontFamily: "'DM Sans', sans-serif", fontSize: 12 }}
             />
             <YAxis
               domain={[0, 55]}
-              tick={{ fill: '#666', fontFamily: 'Space Mono, monospace', fontSize: 11 }}
-              label={{ value: 'Total Clients (Cumulative)', angle: -90, position: 'insideLeft', style: { fontFamily: 'DM Sans, sans-serif', fontSize: 12, fill: '#666' } }}
+              tick={{ fill: '#666', fontFamily: "'Space Mono', monospace", fontSize: 11 }}
+              label={{ value: 'Total Clients (Cumulative)', angle: -90, position: 'insideLeft', style: { fontFamily: "'DM Sans', sans-serif", fontSize: 12, fill: '#666' } }}
             />
             <Tooltip
               contentStyle={{
                 background: '#ffffff',
                 border: '1px solid #e0dbd2',
                 borderRadius: 8,
-                fontFamily: 'DM Sans, sans-serif',
+                fontFamily: "'DM Sans', sans-serif",
                 fontSize: 12,
               }}
               formatter={(value: number | undefined, name: string | undefined) => {
@@ -397,7 +397,7 @@ export default function SalesGoalsPage() {
                 return [value, name];
               }}
             />
-            <Legend wrapperStyle={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12 }} />
             <Bar dataKey="cumulativeTarget" fill="#60a5fa" name="Cumulative Target" radius={[8, 8, 0, 0]} />
             <Bar dataKey="actual" fill="#00c853" name="Actual Total" radius={[8, 8, 0, 0]} />
             <Line type="monotone" dataKey="cumulativeTarget" stroke="#1a1a1a" strokeWidth={3} dot={{ r: 4 }} name="Target Line" />
@@ -408,10 +408,10 @@ export default function SalesGoalsPage() {
       {/* Monthly Breakdown Table */}
       <div style={{
         background: '#ffffff',
-        borderRadius: 16,
+        borderRadius: 12,
         padding: 24,
         border: '1px solid #e0dbd2',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}>
         <h3 style={{
           fontFamily: "'DM Sans', sans-serif",

@@ -4,16 +4,21 @@ import { db } from '@/db';
 import { receivables } from '@/db/schema';
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  const updateFields: Record<string, unknown> = {};
-  if (body.amount !== undefined) updateFields.amount = String(body.amount);
-  if (body.status !== undefined) updateFields.status = body.status;
-  if (body.description !== undefined) updateFields.description = body.description;
+    const updateFields: Record<string, unknown> = {};
+    if (body.amount !== undefined) updateFields.amount = String(body.amount);
+    if (body.status !== undefined) updateFields.status = body.status;
+    if (body.description !== undefined) updateFields.description = body.description;
 
-  if (Object.keys(updateFields).length > 0) {
-    await db.update(receivables).set(updateFields).where(eq(receivables.id, params.id));
+    if (Object.keys(updateFields).length > 0) {
+      await db.update(receivables).set(updateFields).where(eq(receivables.id, params.id));
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error updating receivable:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true });
 }

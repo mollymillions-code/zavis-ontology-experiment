@@ -4,7 +4,7 @@ import type { ReceivableEntry, ReceivableStatus } from '../models/platform-types
 
 export type RevenueType = 'mrr' | 'one_time' | 'mixed';
 
-const ONE_TIME_PATTERNS = /one-time|one time|setup|onboarding|website|integration|training|go live|booking module|development|invoice/i;
+const ONE_TIME_PATTERNS = /one-time|one time|setup|onboarding|website|integration|training|go live|booking module|development/i;
 const RECURRING_PATTERNS = /subscription|monthly|quarterly|half yearly|managed|plan/i;
 
 export function classifyRevenue(description: string): RevenueType {

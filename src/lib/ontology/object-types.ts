@@ -280,7 +280,7 @@ export const CostEntryObjectType: ObjectTypeDefinition = {
     { name: 'month', type: 'string' },
     { name: 'category', type: 'string' },
     { name: 'amount', type: 'number' },
-    { name: 'type', type: 'string', description: 'actual | projected' },
+    { name: 'type', type: 'string', description: 'actual' },
     { name: 'notes', type: 'string', nullable: true },
     { name: 'createdAt', type: 'date' },
   ],

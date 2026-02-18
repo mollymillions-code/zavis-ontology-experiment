@@ -6,29 +6,44 @@ import { dbRowToCost } from '@/db/mappers';
 import type { MonthlyCost } from '@/lib/models/platform-types';
 
 export async function GET(_req: Request, { params }: { params: { month: string } }) {
-  const rows = await db.select().from(monthlyCosts).where(eq(monthlyCosts.month, params.month));
-  return NextResponse.json(rows.map(r => dbRowToCost(r as Record<string, unknown>)));
+  try {
+    const rows = await db.select().from(monthlyCosts).where(eq(monthlyCosts.month, params.month));
+    return NextResponse.json(rows.map(r => dbRowToCost(r as Record<string, unknown>)));
+  } catch (error) {
+    console.error('Error fetching costs by month:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
 }
 
 export async function PUT(req: Request) {
-  const body: Partial<MonthlyCost> = await req.json();
+  try {
+    const body: Partial<MonthlyCost> = await req.json();
 
-  if (body.id) {
-    const updateFields: Record<string, unknown> = {};
-    if (body.amount !== undefined) updateFields.amount = String(body.amount);
-    if (body.notes !== undefined) updateFields.notes = body.notes;
-    if (Object.keys(updateFields).length > 0) {
-      await db.update(monthlyCosts).set(updateFields).where(eq(monthlyCosts.id, body.id));
+    if (body.id) {
+      const updateFields: Record<string, unknown> = {};
+      if (body.amount !== undefined) updateFields.amount = String(body.amount);
+      if (body.notes !== undefined) updateFields.notes = body.notes;
+      if (Object.keys(updateFields).length > 0) {
+        await db.update(monthlyCosts).set(updateFields).where(eq(monthlyCosts.id, body.id));
+      }
     }
-  }
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error updating cost:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: Request) {
-  const { id } = await req.json();
-  if (id) {
-    await db.delete(monthlyCosts).where(eq(monthlyCosts.id, id));
+  try {
+    const { id } = await req.json();
+    if (id) {
+      await db.delete(monthlyCosts).where(eq(monthlyCosts.id, id));
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error deleting cost:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
 }

@@ -6,20 +6,25 @@ import { uploadToS3, buildS3Key } from '@/lib/s3';
 
 // GET /api/documents?entityType=client&entityId=xxx
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const entityType = searchParams.get('entityType');
-  const entityId = searchParams.get('entityId');
+  try {
+    const { searchParams } = new URL(req.url);
+    const entityType = searchParams.get('entityType');
+    const entityId = searchParams.get('entityId');
 
-  if (!entityType || !entityId) {
-    return NextResponse.json({ error: 'entityType and entityId required' }, { status: 400 });
+    if (!entityType || !entityId) {
+      return NextResponse.json({ error: 'entityType and entityId required' }, { status: 400 });
+    }
+
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.entityType, entityType), eq(documents.entityId, entityId)));
+
+    return NextResponse.json(rows);
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
-
-  const rows = await db
-    .select()
-    .from(documents)
-    .where(and(eq(documents.entityType, entityType), eq(documents.entityId, entityId)));
-
-  return NextResponse.json(rows);
 }
 
 // POST /api/documents — upload a document to S3 and record in DB

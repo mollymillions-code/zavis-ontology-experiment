@@ -7,49 +7,59 @@ import { createActionLogEntry } from '@/lib/ontology/action-log';
 import type { PaymentReceived } from '@/lib/models/platform-types';
 
 export async function GET() {
-  const rows = await db.select().from(paymentsReceived);
-  return NextResponse.json(rows.map(r => dbRowToPayment(r as Record<string, unknown>)));
+  try {
+    const rows = await db.select().from(paymentsReceived);
+    return NextResponse.json(rows.map(r => dbRowToPayment(r as Record<string, unknown>)));
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  const body: PaymentReceived = await req.json();
-  const values = paymentToDbValues(body);
-  await db.insert(paymentsReceived).values(values).onConflictDoNothing();
+  try {
+    const body: PaymentReceived = await req.json();
+    const values = paymentToDbValues(body);
+    await db.insert(paymentsReceived).values(values).onConflictDoNothing();
 
-  // Update the linked invoice's amountPaid and balanceDue
-  const invRows = await db.select().from(invoices).where(eq(invoices.id, body.invoiceId));
-  if (invRows.length > 0) {
-    const inv = invRows[0];
-    const currentPaid = Number(inv.amountPaid) || 0;
-    const total = Number(inv.total) || 0;
-    const newPaid = currentPaid + body.amount;
-    const newBalance = Math.max(0, total - newPaid);
-    const newStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partially_paid' : inv.status;
+    // Update the linked invoice's amountPaid and balanceDue
+    const invRows = await db.select().from(invoices).where(eq(invoices.id, body.invoiceId));
+    if (invRows.length > 0) {
+      const inv = invRows[0];
+      const currentPaid = Number(inv.amountPaid) || 0;
+      const total = Number(inv.total) || 0;
+      const newPaid = currentPaid + body.amount;
+      const newBalance = Math.max(0, total - newPaid);
+      const newStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partially_paid' : inv.status;
 
-    const updateFields: Record<string, unknown> = {
-      amountPaid: String(newPaid),
-      balanceDue: String(newBalance),
-      status: newStatus,
-      updatedAt: new Date(),
-    };
-    if (newBalance <= 0) {
-      updateFields.paidAt = new Date();
+      const updateFields: Record<string, unknown> = {
+        amountPaid: String(newPaid),
+        balanceDue: String(newBalance),
+        status: newStatus,
+        updatedAt: new Date(),
+      };
+      if (newBalance <= 0) {
+        updateFields.paidAt = new Date();
+      }
+      await db.update(invoices).set(updateFields).where(eq(invoices.id, body.invoiceId));
     }
-    await db.update(invoices).set(updateFields).where(eq(invoices.id, body.invoiceId));
+
+    // Log to ontology audit trail (fire-and-forget)
+    const logEntry = createActionLogEntry('RecordPayment', {
+      paymentId: body.id,
+      paymentNumber: body.paymentNumber,
+      invoiceId: body.invoiceId,
+      amount: body.amount,
+      mode: body.mode,
+    }, [
+      { objectType: 'PaymentReceived', objectId: body.id, operation: 'create' },
+      { objectType: 'Invoice', objectId: body.invoiceId, operation: 'update' },
+    ], 'user');
+    db.insert(actionLog).values(actionLogEntryToDbValues(logEntry)).catch(() => {});
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error creating payment:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
-
-  // Log to ontology audit trail (fire-and-forget)
-  const logEntry = createActionLogEntry('RecordPayment', {
-    paymentId: body.id,
-    paymentNumber: body.paymentNumber,
-    invoiceId: body.invoiceId,
-    amount: body.amount,
-    mode: body.mode,
-  }, [
-    { objectType: 'PaymentReceived', objectId: body.id, operation: 'create' },
-    { objectType: 'Invoice', objectId: body.invoiceId, operation: 'update' },
-  ], 'user');
-  db.insert(actionLog).values(actionLogEntryToDbValues(logEntry)).catch(() => {});
-
-  return NextResponse.json({ ok: true });
 }

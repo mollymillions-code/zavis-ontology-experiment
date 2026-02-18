@@ -36,7 +36,7 @@ function getCategoryLabel(cat: string) {
   return cat in COST_CATEGORY_LABELS ? COST_CATEGORY_LABELS[cat as CostCategory] : cat;
 }
 
-function normCat(cat: string) { return cat === 'chatwoot_sub' ? 'chatwoot_seats' : cat; }
+function normCat(cat: string) { return cat; }
 
 interface CostsFlowTableProps {
   costs: MonthlyCost[];
@@ -76,31 +76,25 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
     const categorySet = new Set<string>();
     const actPivot: Record<string, Record<string, number>> = {};
 
-    // Build the projected flat rate per category from the latest cost entry
-    // (the monthly cost entered in the breakdown table above)
-    const latestByCategory: Record<string, { month: string; amount: number }> = {};
-
+    // First pass: accumulate all costs by category and month
     for (const c of costs) {
+      if (c.month === 'annual') continue;
       const cat = normCat(c.category);
       categorySet.add(cat);
-
-      // Track actual values by month
       if (!actPivot[cat]) actPivot[cat] = {};
       actPivot[cat][c.month] = (actPivot[cat][c.month] || 0) + c.amount;
-
-      // Track the latest entered monthly cost for projection
-      if (!latestByCategory[cat] || c.month >= latestByCategory[cat].month) {
-        latestByCategory[cat] = { month: c.month, amount: (actPivot[cat][c.month] || 0) };
-      }
     }
 
-    // Projected flat = the latest entered monthly cost, carried forward
+    // Second pass: find the latest month's total per category for projection
     const projFlat: Record<string, number> = {};
     for (const cat of Array.from(categorySet)) {
       if (cat === 'payroll') {
         projFlat[cat] = payrollTotal;
       } else {
-        projFlat[cat] = latestByCategory[cat]?.amount || 0;
+        const monthsWithData = Object.keys(actPivot[cat] || {}).sort();
+        projFlat[cat] = monthsWithData.length > 0
+          ? actPivot[cat][monthsWithData[monthsWithData.length - 1]]
+          : 0;
       }
     }
 

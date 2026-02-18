@@ -79,7 +79,7 @@ export default function ReceivablesPage() {
       subtitle={`${receivables.length} entries · ${monthlySummary.length} months`}
     >
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
         <KPICard title="Total Receivables" value={formatAED(totals.total)} accent="#2979ff" />
         <KPICard title="Recurring" value={formatAED(revTypeTotals.mrr)} accent="#10b981" />
         <KPICard title="One-Time" value={formatAED(revTypeTotals.oneTime)} accent="#f59e0b" />

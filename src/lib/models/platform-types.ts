@@ -91,8 +91,6 @@ export interface ReceivableEntry {
   amount: number;
   description: string;
   status: ReceivableStatus;
-  dueDate?: string;
-  paidDate?: string;
 }
 
 // ========== MONTHLY COSTS ==========

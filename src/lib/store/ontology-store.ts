@@ -77,6 +77,11 @@ export const useOntologyStore = create<OntologyState>()(
 
       addCustomerPartnerLink: (link) => {
         set((s) => ({ customerPartnerLinks: [...s.customerPartnerLinks, link] }));
+        postToApi('/ontology/actions', {
+          actionType: 'AssignPartner',
+          inputs: { customerId: link.customerId, partnerId: link.partnerId, attributionPct: link.attributionPct },
+          actor: 'user',
+        }).catch(console.error);
       },
 
       // ── Derived Queries (client-side graph traversal) ──
@@ -166,16 +171,18 @@ export const useOntologyStore = create<OntologyState>()(
 
       hydrateFromDb: async () => {
         try {
-          const [partnersData, contractsData, streamsData, actionLogData] = await Promise.all([
+          const [partnersData, contractsData, streamsData, linksData, actionLogData] = await Promise.all([
             fetchFromApi<Partner[]>('/partners'),
             fetchFromApi<Contract[]>('/contracts'),
             fetchFromApi<RevenueStream[]>('/revenue-streams'),
+            fetchFromApi<CustomerPartnerLink[]>('/customer-partner-links'),
             fetchFromApi<ActionLogEntry[]>('/ontology/action-log?limit=100'),
           ]);
 
           if (partnersData.length > 0) set({ partners: partnersData });
           if (contractsData.length > 0) set({ contracts: contractsData });
           if (streamsData.length > 0) set({ revenueStreams: streamsData });
+          if (linksData.length > 0) set({ customerPartnerLinks: linksData });
           if (actionLogData.length > 0) set({ actionLog: actionLogData });
         } catch {
           // Silently fall back to localStorage data

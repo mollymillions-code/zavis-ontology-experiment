@@ -87,7 +87,7 @@ export default function InvoicesPage() {
       }
     >
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
         <KPICard title="Total Invoiced" value={`${fmt(metrics.totalInvoiced)} AED`} accent="#1a1a1a" />
         <KPICard title="Paid" value={`${fmt(metrics.totalPaid)} AED`} accent="#00c853" />
         <KPICard title="Outstanding" value={`${fmt(metrics.totalOutstanding)} AED`} accent="#ff9800" />

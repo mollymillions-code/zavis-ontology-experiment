@@ -98,16 +98,6 @@ function CellTooltip({ data, clientName }: { data: TooltipData; clientName: stri
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2, lineHeight: 1.3 }}>
               {e.description}
             </p>
-            {e.dueDate && (
-              <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                Due: {e.dueDate}
-              </p>
-            )}
-            {e.paidDate && (
-              <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: 'rgba(16,185,129,0.7)', marginTop: 1 }}>
-                Paid: {e.paidDate}
-              </p>
-            )}
           </div>
         );
       })}

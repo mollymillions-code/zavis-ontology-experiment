@@ -146,14 +146,24 @@ export default function DashboardPage() {
       });
   }, [clients, metrics.totalMRR]);
 
-  // Projected flat cost = latest entered monthly cost per category, carried forward
+  // Projected flat cost = sum of latest monthly cost per category, carried forward
   const projectedMonthlyCost = useMemo(() => {
-    const latestByCategory: Record<string, number> = {};
+    // Group by category, tracking the latest month's total per category
+    const categoryMonthTotals: Record<string, Record<string, number>> = {};
     for (const c of monthlyCosts) {
       if (c.month === 'annual') continue;
-      latestByCategory[c.category] = c.amount;
+      if (!categoryMonthTotals[c.category]) categoryMonthTotals[c.category] = {};
+      categoryMonthTotals[c.category][c.month] = (categoryMonthTotals[c.category][c.month] || 0) + c.amount;
     }
-    return Object.values(latestByCategory).reduce((s, v) => s + v, 0);
+    // For each category, use the latest month's total
+    let total = 0;
+    for (const cat of Object.keys(categoryMonthTotals)) {
+      const months = Object.keys(categoryMonthTotals[cat]).sort();
+      if (months.length > 0) {
+        total += categoryMonthTotals[cat][months[months.length - 1]];
+      }
+    }
+    return total;
   }, [monthlyCosts]);
 
   // Cash Flow pivot data

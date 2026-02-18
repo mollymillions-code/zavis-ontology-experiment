@@ -136,6 +136,7 @@ export default function PayrollPage() {
     borderRadius: 16,
     padding: 24,
     boxShadow: '0 8px 32px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.04)',
+    overflowX: 'auto' as const,
   };
 
   const inputStyle = {
@@ -144,7 +145,7 @@ export default function PayrollPage() {
     borderRadius: 6,
     padding: '6px 10px',
     color: '#ffffff',
-    fontFamily: 'Space Mono, monospace',
+    fontFamily: "'Space Mono', monospace",
     fontSize: 13,
     width: '110px',
     textAlign: 'right' as const,
@@ -154,7 +155,7 @@ export default function PayrollPage() {
     textAlign: 'left' as const,
     padding: '10px 8px',
     color: 'rgba(255,255,255,0.5)',
-    fontFamily: 'DM Sans, sans-serif',
+    fontFamily: "'DM Sans', sans-serif",
     fontSize: 11,
     fontWeight: 600,
     textTransform: 'uppercase' as const,
@@ -172,7 +173,7 @@ export default function PayrollPage() {
   return (
     <PageShell title="Payroll" subtitle="Employee compensation management">
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
         <KPICard title="Total Monthly Payroll" value={formatAED(totalMonthly)} accent="#ff6e40" />
         <KPICard title="Headcount (Active)" value={String(headcount)} accent="#60a5fa" />
         <KPICard title="Avg Salary" value={formatAED(avgSalary)} accent="#fbbf24" />
@@ -181,7 +182,7 @@ export default function PayrollPage() {
       {/* Payroll Table */}
       <div style={tableStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#ffffff', fontFamily: 'DM Sans, sans-serif' }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#ffffff', fontFamily: "'DM Sans', sans-serif" }}>
             Employee Payroll
           </h2>
           <button
@@ -193,7 +194,7 @@ export default function PayrollPage() {
               borderRadius: 8,
               padding: '8px 16px',
               color: '#ffffff',
-              fontFamily: 'DM Sans, sans-serif',
+              fontFamily: "'DM Sans', sans-serif",
               fontSize: 13,
               fontWeight: 600,
               cursor: hasEdits ? 'pointer' : 'not-allowed',
@@ -234,10 +235,10 @@ export default function PayrollPage() {
                     transition: 'opacity 0.2s ease',
                   }}
                 >
-                  <td style={{ padding: '12px 8px', color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500 }}>
+                  <td style={{ padding: '12px 8px', color: '#ffffff', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500 }}>
                     {entry.name}
                   </td>
-                  <td style={{ padding: '12px 8px', color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }}>
+                  <td style={{ padding: '12px 8px', color: 'rgba(255,255,255,0.7)', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
                     {entry.role}
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'right' }}>
@@ -257,7 +258,7 @@ export default function PayrollPage() {
                         border: 'none',
                         fontSize: 11,
                         fontWeight: 600,
-                        fontFamily: 'DM Sans, sans-serif',
+                        fontFamily: "'DM Sans', sans-serif",
                         cursor: 'pointer',
                         background: isActive ? 'rgba(0,200,83,0.15)' : 'rgba(255,255,255,0.08)',
                         color: isActive ? '#00c853' : 'rgba(255,255,255,0.4)',
@@ -270,7 +271,7 @@ export default function PayrollPage() {
                     padding: '12px 8px',
                     textAlign: 'right',
                     color: '#60a5fa',
-                    fontFamily: 'Space Mono, monospace',
+                    fontFamily: "'Space Mono', monospace",
                     fontSize: 13,
                     fontWeight: 600,
                   }}>
@@ -302,17 +303,17 @@ export default function PayrollPage() {
             {/* Totals Row */}
             {entries.length > 0 && (
               <tr style={{ borderTop: '2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}>
-                <td style={{ padding: '14px 8px', color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 700 }}>
+                <td style={{ padding: '14px 8px', color: '#ffffff', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 700 }}>
                   TOTAL
                 </td>
                 <td />
-                <td style={{ padding: '14px 8px', textAlign: 'right', color: '#00c853', fontFamily: 'Space Mono, monospace', fontSize: 14, fontWeight: 700 }}>
+                <td style={{ padding: '14px 8px', textAlign: 'right', color: '#00c853', fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700 }}>
                   {formatAED(totalMonthly)}
                 </td>
-                <td style={{ padding: '14px 8px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontFamily: 'DM Sans, sans-serif', fontSize: 12 }}>
+                <td style={{ padding: '14px 8px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontFamily: "'DM Sans', sans-serif", fontSize: 12 }}>
                   {headcount} active
                 </td>
-                <td style={{ padding: '14px 8px', textAlign: 'right', color: '#60a5fa', fontFamily: 'Space Mono, monospace', fontSize: 14, fontWeight: 700 }}>
+                <td style={{ padding: '14px 8px', textAlign: 'right', color: '#60a5fa', fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700 }}>
                   {formatAED(totalMonthly * 12)}
                 </td>
                 <td />
@@ -329,7 +330,7 @@ export default function PayrollPage() {
                       display: 'flex', alignItems: 'center', gap: 6, width: '100%',
                       padding: '10px 12px', borderRadius: 8,
                       border: '1px dashed rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.04)',
-                      color: '#60a5fa', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+                      color: '#60a5fa', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
                       fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(96,165,250,0.1)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)'; }}
@@ -350,7 +351,7 @@ export default function PayrollPage() {
                     style={{
                       width: '100%', background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
-                      padding: '8px 10px', color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+                      padding: '8px 10px', color: '#ffffff', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
                     }}
                   />
                 </td>
@@ -362,7 +363,7 @@ export default function PayrollPage() {
                     style={{
                       width: '100%', background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
-                      padding: '8px 10px', color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+                      padding: '8px 10px', color: '#ffffff', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
                     }}
                   />
                 </td>
@@ -374,7 +375,7 @@ export default function PayrollPage() {
                     style={{
                       width: '100%', background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
-                      padding: '8px 10px', color: '#ffffff', fontFamily: 'Space Mono, monospace',
+                      padding: '8px 10px', color: '#ffffff', fontFamily: "'Space Mono', monospace",
                       fontSize: 13, textAlign: 'right',
                     }}
                   />
@@ -386,7 +387,7 @@ export default function PayrollPage() {
                       style={{
                         padding: '7px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent', color: 'rgba(255,255,255,0.5)',
-                        fontFamily: 'DM Sans, sans-serif', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, cursor: 'pointer',
                       }}
                     >
                       Cancel
@@ -397,7 +398,7 @@ export default function PayrollPage() {
                       style={{
                         padding: '7px 18px', borderRadius: 6, border: 'none',
                         background: addForm.name.trim() && addForm.salary ? '#00c853' : 'rgba(255,255,255,0.1)',
-                        color: '#ffffff', fontFamily: 'DM Sans, sans-serif', fontSize: 12,
+                        color: '#ffffff', fontFamily: "'DM Sans', sans-serif", fontSize: 12,
                         fontWeight: 700, cursor: addForm.name.trim() && addForm.salary ? 'pointer' : 'not-allowed',
                       }}
                     >
@@ -417,7 +418,7 @@ export default function PayrollPage() {
             border: '1px solid rgba(251, 191, 36, 0.3)',
             borderRadius: 8,
           }}>
-            <p style={{ margin: 0, color: '#fbbf24', fontSize: 12, fontFamily: 'DM Sans, sans-serif' }}>
+            <p style={{ margin: 0, color: '#fbbf24', fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}>
               You have unsaved changes. Click &ldquo;Save Changes&rdquo; to persist them to the database.
             </p>
           </div>
