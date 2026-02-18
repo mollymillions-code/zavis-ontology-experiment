@@ -146,29 +146,45 @@ export default function DashboardPage() {
       });
   }, [clients, metrics.totalMRR]);
 
+  // Projected flat cost = latest entered monthly cost per category, carried forward
+  const projectedMonthlyCost = useMemo(() => {
+    const latestByCategory: Record<string, number> = {};
+    for (const c of monthlyCosts) {
+      if (c.month === 'annual') continue;
+      latestByCategory[c.category] = c.amount;
+    }
+    return Object.values(latestByCategory).reduce((s, v) => s + v, 0);
+  }, [monthlyCosts]);
+
   // Cash Flow pivot data
   const cashFlowData = useMemo(() => {
     // Collect all months from both receivables and costs
     const monthSet = new Set<string>();
     for (const r of receivables) monthSet.add(r.month);
-    for (const c of monthlyCosts) monthSet.add(c.month);
+    for (const c of monthlyCosts) {
+      if (c.month !== 'annual') monthSet.add(c.month);
+    }
     const months = Array.from(monthSet).sort();
 
     return months.map((m) => {
-      // IN: receivables per month (paid only for actuals)
+      // IN: receivables per month (paid only)
       const inAmount = receivables
         .filter((r) => r.month === m && r.status === 'paid')
         .reduce((s, r) => s + r.amount, 0);
 
-      // OUT: costs per month
-      const outAmount = monthlyCosts
+      // OUT Projected: flat monthly cost carried forward
+      const outProjected = projectedMonthlyCost;
+
+      // OUT Actual: actual cost entries for this month
+      const outActual = monthlyCosts
         .filter((c) => c.month === m)
         .reduce((s, c) => s + c.amount, 0);
 
-      const net = inAmount - outAmount;
-      return { month: m, label: fmtMonth(m), inAmount, outAmount, net };
+      const netProjected = inAmount - outProjected;
+      const netActual = inAmount - outActual;
+      return { month: m, label: fmtMonth(m), inAmount, outProjected, outActual, netProjected, netActual };
     });
-  }, [receivables, monthlyCosts]);
+  }, [receivables, monthlyCosts, projectedMonthlyCost]);
 
   return (
     <PageShell
@@ -587,27 +603,17 @@ export default function DashboardPage() {
                 {/* IN — Receivables */}
                 <tr style={{ borderBottom: '1px solid #e0dbd2', background: '#fafaf8' }}>
                   <td style={{
-                    padding: '10px 12px',
-                    fontWeight: 600,
-                    color: '#1a1a1a',
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 11,
-                    whiteSpace: 'nowrap',
-                    position: 'sticky',
-                    left: 0,
-                    background: '#fafaf8',
-                    zIndex: 1,
+                    padding: '10px 12px', fontWeight: 600, color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 11, whiteSpace: 'nowrap',
+                    position: 'sticky', left: 0, background: '#fafaf8', zIndex: 1,
                   }}>
                     <span style={{ marginRight: 6, fontSize: 9, fontWeight: 700, color: '#00a844', background: 'rgba(0,168,68,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: "'DM Sans', sans-serif" }}>IN</span>
                     Receivables
                   </td>
                   {cashFlowData.map((d) => (
                     <td key={d.month} style={{
-                      padding: '10px 8px',
-                      textAlign: 'right',
-                      fontFamily: "'Space Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 600,
+                      padding: '10px 8px', textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace", fontSize: 10, fontWeight: 600,
                       color: '#00a844',
                       background: d.inAmount > 0 ? 'rgba(0,168,68,0.06)' : undefined,
                     }}>
@@ -615,101 +621,125 @@ export default function DashboardPage() {
                     </td>
                   ))}
                   <td style={{
-                    padding: '10px 12px',
-                    textAlign: 'right',
-                    fontFamily: "'Space Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 11,
-                    color: '#00a844',
-                    borderLeft: '2px solid #e0dbd2',
+                    padding: '10px 12px', textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11,
+                    color: '#00a844', borderLeft: '2px solid #e0dbd2',
                   }}>
                     {formatAED(cashFlowData.reduce((s, d) => s + d.inAmount, 0), 0)}
                   </td>
                 </tr>
 
-                {/* OUT — Costs */}
+                {/* OUT — Costs (Projected) */}
                 <tr style={{ borderBottom: '1px solid #e0dbd2', background: '#ffffff' }}>
                   <td style={{
-                    padding: '10px 12px',
-                    fontWeight: 600,
-                    color: '#1a1a1a',
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 11,
-                    whiteSpace: 'nowrap',
-                    position: 'sticky',
-                    left: 0,
-                    background: '#ffffff',
-                    zIndex: 1,
+                    padding: '10px 12px', fontWeight: 600, color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 11, whiteSpace: 'nowrap',
+                    position: 'sticky', left: 0, background: '#ffffff', zIndex: 1,
                   }}>
-                    <span style={{ marginRight: 6, fontSize: 9, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: "'DM Sans', sans-serif" }}>OUT</span>
-                    Costs
+                    <span style={{ marginRight: 6, fontSize: 9, fontWeight: 700, color: '#d97706', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: "'DM Sans', sans-serif" }}>OUT</span>
+                    Costs <span style={{ fontSize: 9, color: '#d97706', fontWeight: 500 }}>(Projected)</span>
                   </td>
                   {cashFlowData.map((d) => (
                     <td key={d.month} style={{
-                      padding: '10px 8px',
-                      textAlign: 'right',
-                      fontFamily: "'Space Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: '#dc2626',
-                      background: d.outAmount > 0 ? 'rgba(239,68,68,0.06)' : undefined,
+                      padding: '10px 8px', textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace", fontSize: 10, fontWeight: 600,
+                      color: '#d97706',
+                      background: d.outProjected > 0 ? 'rgba(245,158,11,0.06)' : undefined,
                     }}>
-                      {d.outAmount > 0 ? formatAED(d.outAmount, 0) : '—'}
+                      {d.outProjected > 0 ? formatAED(d.outProjected, 0) : '—'}
                     </td>
                   ))}
                   <td style={{
-                    padding: '10px 12px',
-                    textAlign: 'right',
-                    fontFamily: "'Space Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 11,
-                    color: '#dc2626',
-                    borderLeft: '2px solid #e0dbd2',
+                    padding: '10px 12px', textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11,
+                    color: '#d97706', borderLeft: '2px solid #e0dbd2',
                   }}>
-                    {formatAED(cashFlowData.reduce((s, d) => s + d.outAmount, 0), 0)}
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.outProjected, 0), 0)}
+                  </td>
+                </tr>
+
+                {/* OUT — Costs (Actual) */}
+                <tr style={{ borderBottom: '1px solid #e0dbd2', background: '#fafaf8' }}>
+                  <td style={{
+                    padding: '10px 12px', fontWeight: 600, color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 11, whiteSpace: 'nowrap',
+                    position: 'sticky', left: 0, background: '#fafaf8', zIndex: 1,
+                  }}>
+                    <span style={{ marginRight: 6, fontSize: 9, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: "'DM Sans', sans-serif" }}>OUT</span>
+                    Costs <span style={{ fontSize: 9, color: '#dc2626', fontWeight: 500 }}>(Actual)</span>
+                  </td>
+                  {cashFlowData.map((d) => (
+                    <td key={d.month} style={{
+                      padding: '10px 8px', textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace", fontSize: 10, fontWeight: 600,
+                      color: '#dc2626',
+                      background: d.outActual > 0 ? 'rgba(239,68,68,0.04)' : undefined,
+                    }}>
+                      {d.outActual > 0 ? formatAED(d.outActual, 0) : '—'}
+                    </td>
+                  ))}
+                  <td style={{
+                    padding: '10px 12px', textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11,
+                    color: '#dc2626', borderLeft: '2px solid #e0dbd2',
+                  }}>
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.outActual, 0), 0)}
                   </td>
                 </tr>
               </tbody>
               <tfoot>
-                {/* NET row */}
+                {/* NET Projected row */}
                 <tr style={{ borderTop: '2px solid #e0dbd2', background: '#f5f0e8' }}>
                   <td style={{
-                    padding: '12px 12px',
-                    fontWeight: 700,
-                    color: '#1a1a1a',
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 12,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                    position: 'sticky',
-                    left: 0,
-                    background: '#f5f0e8',
-                    zIndex: 1,
+                    padding: '10px 12px', fontWeight: 700, color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: 0.3,
+                    position: 'sticky', left: 0, background: '#f5f0e8', zIndex: 1,
                   }}>
-                    NET
+                    NET <span style={{ fontSize: 9, color: '#d97706', fontWeight: 600 }}>(Projected)</span>
                   </td>
                   {cashFlowData.map((d) => (
                     <td key={d.month} style={{
-                      padding: '12px 8px',
-                      textAlign: 'right',
-                      fontFamily: "'Space Mono', monospace",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: d.net >= 0 ? '#00a844' : '#dc2626',
+                      padding: '10px 8px', textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace", fontSize: 10, fontWeight: 700,
+                      color: d.netProjected >= 0 ? '#00a844' : '#dc2626',
                     }}>
-                      {formatAED(d.net, 0)}
+                      {formatAED(d.netProjected, 0)}
                     </td>
                   ))}
                   <td style={{
-                    padding: '12px 12px',
-                    textAlign: 'right',
-                    fontFamily: "'Space Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    color: cashFlowData.reduce((s, d) => s + d.net, 0) >= 0 ? '#00a844' : '#dc2626',
+                    padding: '10px 12px', textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11,
+                    color: cashFlowData.reduce((s, d) => s + d.netProjected, 0) >= 0 ? '#00a844' : '#dc2626',
                     borderLeft: '2px solid #e0dbd2',
                   }}>
-                    {formatAED(cashFlowData.reduce((s, d) => s + d.net, 0), 0)}
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.netProjected, 0), 0)}
+                  </td>
+                </tr>
+                {/* NET Actual row */}
+                <tr style={{ background: '#f5f0e8' }}>
+                  <td style={{
+                    padding: '10px 12px', fontWeight: 700, color: '#1a1a1a',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: 0.3,
+                    position: 'sticky', left: 0, background: '#f5f0e8', zIndex: 1,
+                  }}>
+                    NET <span style={{ fontSize: 9, color: '#dc2626', fontWeight: 600 }}>(Actual)</span>
+                  </td>
+                  {cashFlowData.map((d) => (
+                    <td key={d.month} style={{
+                      padding: '10px 8px', textAlign: 'right',
+                      fontFamily: "'Space Mono', monospace", fontSize: 10, fontWeight: 700,
+                      color: d.netActual >= 0 ? '#00a844' : '#dc2626',
+                    }}>
+                      {formatAED(d.netActual, 0)}
+                    </td>
+                  ))}
+                  <td style={{
+                    padding: '10px 12px', textAlign: 'right',
+                    fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11,
+                    color: cashFlowData.reduce((s, d) => s + d.netActual, 0) >= 0 ? '#00a844' : '#dc2626',
+                    borderLeft: '2px solid #e0dbd2',
+                  }}>
+                    {formatAED(cashFlowData.reduce((s, d) => s + d.netActual, 0), 0)}
                   </td>
                 </tr>
               </tfoot>
@@ -717,7 +747,7 @@ export default function DashboardPage() {
           </div>
         )}
         <p style={{ fontSize: 10, color: '#aaa', fontFamily: "'DM Sans', sans-serif", marginTop: 12, fontStyle: 'italic' }}>
-          Paid receivables vs monthly costs
+          Projected: flat monthly cost carried forward | Actual: recorded costs per month
         </p>
       </div>
     </PageShell>
