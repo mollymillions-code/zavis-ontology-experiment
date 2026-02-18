@@ -759,7 +759,6 @@ export default function CostsPage() {
           <tbody>
             {categories.map((cat, idx) => {
               const actual = getCostAmount(cat, 'actual');
-              const projected = getCostAmount(cat, 'projected');
               const annual = actual * 12;
               const perSeat = totalSeats > 0 ? actual / totalSeats : 0;
               const label =

@@ -345,7 +345,6 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
           </thead>
           <tbody>
             {categories.map((cat, i) => {
-              const color = getCategoryColor(cat, i);
               const rowBg = i % 2 === 0 ? '#fafaf8' : '#ffffff';
               const flatProj = projFlat[cat] || 0;
               const actTotal = actCatTotals[cat] || 0;
