@@ -15,7 +15,7 @@ export const SALES_PARTNER_INFO: Record<string, SalesPartnerInfo> = {
   'Dr. Faisal': {
     id: 'dr-faisal',
     name: 'Dr. Faisal',
-    joinedDate: '2024-01-15',
+    joinedDate: '',
     commissionPercentage: 10, // 10% of MRR
     oneTimeCommissionPercentage: 15, // 15% of one-time revenue
     totalPaid: 8500, // AED paid so far
@@ -24,7 +24,7 @@ export const SALES_PARTNER_INFO: Record<string, SalesPartnerInfo> = {
   'Wasim': {
     id: 'wasim',
     name: 'Wasim',
-    joinedDate: '2024-03-01',
+    joinedDate: '',
     commissionPercentage: 12, // 12% of MRR
     oneTimeCommissionPercentage: 20, // 20% of one-time revenue
     totalPaid: 6200,
@@ -33,7 +33,7 @@ export const SALES_PARTNER_INFO: Record<string, SalesPartnerInfo> = {
   'Thousif': {
     id: 'thousif',
     name: 'Thousif',
-    joinedDate: '2024-02-10',
+    joinedDate: '',
     commissionPercentage: 10,
     oneTimeCommissionPercentage: 15,
     totalPaid: 4800,
@@ -42,7 +42,7 @@ export const SALES_PARTNER_INFO: Record<string, SalesPartnerInfo> = {
   'Code Latis': {
     id: 'code-latis',
     name: 'Code Latis',
-    joinedDate: '2024-04-20',
+    joinedDate: '',
     commissionPercentage: 8, // 8% of MRR
     oneTimeCommissionPercentage: 10, // 10% of one-time revenue
     totalPaid: 2100,
@@ -51,7 +51,7 @@ export const SALES_PARTNER_INFO: Record<string, SalesPartnerInfo> = {
   'Sagar': {
     id: 'sagar',
     name: 'Sagar',
-    joinedDate: '2024-05-15',
+    joinedDate: '',
     commissionPercentage: 10,
     oneTimeCommissionPercentage: 15,
     totalPaid: 1500,
@@ -60,7 +60,7 @@ export const SALES_PARTNER_INFO: Record<string, SalesPartnerInfo> = {
   'Cloudlink': {
     id: 'cloudlink',
     name: 'Cloudlink',
-    joinedDate: '2024-06-01',
+    joinedDate: '',
     commissionPercentage: 5, // 5% of MRR (corporate partner)
     oneTimeCommissionPercentage: 8, // 8% of one-time revenue
     totalPaid: 900,

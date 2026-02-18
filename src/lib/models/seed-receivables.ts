@@ -40,7 +40,6 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-016', clientId: 'cli-003', month: '2026-03', amount: 3750, description: 'Quarterly Subscription Fee', status: 'pending' },
   { id: 'rcv-017', clientId: 'cli-008', month: '2026-03', amount: 675, description: 'Monthly Subscription 3 Seats', status: 'pending' },
   { id: 'rcv-018', clientId: 'cli-007', month: '2026-03', amount: 3375, description: 'Quarterly Subscription Fee', status: 'pending' },
-  { id: 'rcv-019', clientId: 'cli-009', month: '2026-03', amount: 10735, description: 'ECLA Platform Services', status: 'pending' },
   { id: 'rcv-055', clientId: 'cli-006', month: '2026-03', amount: 3375, description: 'Quarterly Subscription Fee (Pro Plan)', status: 'pending' },
 
   // ===== April 2026 =====

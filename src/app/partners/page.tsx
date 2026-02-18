@@ -263,10 +263,11 @@ export default function SalesPartnersPage() {
             </thead>
             <tbody>
               {partnerMetrics.map((partner, idx) => {
-                const joinedDate = new Date(partner.joinedDate);
-                const monthsActive = Math.floor(
-                  (Date.now() - joinedDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-                );
+                const hasJoinedDate = !!partner.joinedDate;
+                const joinedDate = hasJoinedDate ? new Date(partner.joinedDate) : null;
+                const monthsActive = joinedDate
+                  ? Math.floor((Date.now() - joinedDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
+                  : null;
                 const isExpanded = expandedPartner === partner.id;
                 const mrrCellKey = `${partner.id}-mrr`;
                 const otCellKey = `${partner.id}-ot`;
@@ -334,10 +335,14 @@ export default function SalesPartnersPage() {
                           color: '#666',
                         }}
                       >
-                        {joinedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                        <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
-                          {monthsActive}mo
-                        </div>
+                        {joinedDate
+                          ? joinedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                          : 'N/A'}
+                        {monthsActive !== null && (
+                          <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                            {monthsActive}mo
+                          </div>
+                        )}
                       </td>
                       <td onClick={() => togglePartner(partner.id)} style={{ padding: '14px 8px', textAlign: 'center' }}>
                         <span
