@@ -74,7 +74,7 @@ export default function DashboardPage() {
   const clients = useClientStore((s) => s.clients);
   const receivables = useClientStore((s) => s.receivables);
   const { costs: monthlyCosts, loading: costsLoading } = useMonthlyCosts();
-  const [cashFlowView, setCashFlowView] = useState<'actual' | 'projected'>('actual');
+  const cashFlowView = 'actual' as const;
   const latestSnapshot = useSnapshotStore((s) => s.getLatestSnapshot());
   const currentMonth = new Date().toISOString().slice(0, 7);
   const previousSnapshot = useSnapshotStore((s) => s.getPreviousSnapshot(latestSnapshot?.month || currentMonth));
@@ -156,14 +156,14 @@ export default function DashboardPage() {
     const months = Array.from(monthSet).sort();
 
     return months.map((m) => {
-      // IN: receivables per month
+      // IN: receivables per month (paid only for actuals)
       const inAmount = receivables
-        .filter((r) => r.month === m && (cashFlowView === 'actual' ? r.status === 'paid' : true))
+        .filter((r) => r.month === m && r.status === 'paid')
         .reduce((s, r) => s + r.amount, 0);
 
       // OUT: costs per month
       const outAmount = monthlyCosts
-        .filter((c) => c.month === m && c.type === cashFlowView)
+        .filter((c) => c.month === m)
         .reduce((s, c) => s + c.amount, 0);
 
       const net = inAmount - outAmount;
@@ -509,30 +509,6 @@ export default function DashboardPage() {
       <div style={{ ...cardStyle, marginTop: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <h3 style={{ ...sectionTitle, marginBottom: 0 }}>Cash Flow Overview</h3>
-          {/* Actual / Projected toggle */}
-          <div style={{ display: 'flex', gap: 4, background: '#f0ebe0', borderRadius: 10, padding: 4 }}>
-            {(['actual', 'projected'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setCashFlowView(v)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: cashFlowView === v ? '#ffffff' : 'transparent',
-                  color: cashFlowView === v ? '#1a1a1a' : '#666',
-                  fontWeight: cashFlowView === v ? 700 : 500,
-                  fontSize: 12,
-                  fontFamily: "'DM Sans', sans-serif",
-                  cursor: 'pointer',
-                  boxShadow: cashFlowView === v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {v === 'actual' ? 'Actual' : 'Projected'}
-              </button>
-            ))}
-          </div>
         </div>
 
         {costsLoading ? (
@@ -742,9 +718,7 @@ export default function DashboardPage() {
           </div>
         )}
         <p style={{ fontSize: 10, color: '#aaa', fontFamily: "'DM Sans', sans-serif", marginTop: 12, fontStyle: 'italic' }}>
-          {cashFlowView === 'actual'
-            ? 'Actual: paid receivables vs actual costs'
-            : 'Projected: all receivables vs projected costs'}
+          Paid receivables vs monthly costs
         </p>
       </div>
     </PageShell>

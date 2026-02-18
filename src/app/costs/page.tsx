@@ -37,7 +37,6 @@ function formatMonthLabel(month: string) {
 interface AddCostForm {
   category: string;
   customCategory: string;
-  type: 'actual' | 'projected';
   amount: string;
   notes: string;
 }
@@ -54,7 +53,6 @@ export default function CostsPage() {
   const [addForm, setAddForm] = useState<AddCostForm>({
     category: 'aws',
     customCategory: '',
-    type: 'actual',
     amount: '',
     notes: '',
   });
@@ -89,14 +87,11 @@ export default function CostsPage() {
     [costs, selectedMonth]
   );
 
-  const { totalActual, totalProjected, totalSeats } = useMemo(() => {
-    const actual = monthCosts.filter((c) => c.type === 'actual');
-    const projected = monthCosts.filter((c) => c.type === 'projected');
-    const totActual = actual.reduce((sum, c) => sum + c.amount, 0);
-    const totProjected = projected.reduce((sum, c) => sum + c.amount, 0);
+  const { totalActual, totalSeats } = useMemo(() => {
+    const totActual = monthCosts.reduce((sum, c) => sum + c.amount, 0);
     const activeClients = clients.filter((c) => c.status === 'active');
     const totSeats = activeClients.reduce((sum, c) => sum + (c.seatCount || 0), 0);
-    return { totalActual: totActual, totalProjected: totProjected, totalSeats: totSeats };
+    return { totalActual: totActual, totalSeats: totSeats };
   }, [monthCosts, clients]);
 
   // Map of `category-type` → cost entry for selected month
@@ -227,7 +222,7 @@ export default function CostsPage() {
           month: selectedMonth,
           category: categoryValue,
           amount: parseFloat(addForm.amount) || 0,
-          type: addForm.type,
+          type: 'actual',
           notes: addForm.notes,
           createdAt: new Date().toISOString(),
         }),
@@ -237,7 +232,7 @@ export default function CostsPage() {
       const data = await res.json();
       setCosts(data);
       setShowAddForm(false);
-      setAddForm({ category: 'aws', customCategory: '', type: 'actual', amount: '', notes: '' });
+      setAddForm({ category: 'aws', customCategory: '', amount: '', notes: '' });
     } finally {
       setAddingCost(false);
     }
@@ -284,9 +279,6 @@ export default function CostsPage() {
       </PageShell>
     );
   }
-
-  const growthRate =
-    totalActual > 0 ? ((totalProjected - totalActual) / totalActual) * 100 : 0;
 
   return (
     <PageShell title="Costs" subtitle="Monthly operational expenses">
@@ -374,16 +366,12 @@ export default function CostsPage() {
       <div
         style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}
       >
-        <KPICard title="Current Monthly Burn" value={formatAED(totalActual)} accent="#ff6e40" />
+        <KPICard title="Monthly Burn" value={formatAED(totalActual)} accent="#ff6e40" />
+        <KPICard title="Annual Burn" value={formatAED(totalActual * 12)} accent="#60a5fa" />
         <KPICard
-          title="Projected Monthly Burn"
-          value={formatAED(totalProjected)}
+          title="Per Seat Cost"
+          value={totalSeats > 0 ? formatAED(totalActual / totalSeats) : '—'}
           accent="#fbbf24"
-        />
-        <KPICard
-          title="Growth Rate"
-          value={`${growthRate > 0 ? '+' : ''}${growthRate.toFixed(1)}%`}
-          accent={growthRate > 50 ? '#ff6e40' : '#00c853'}
         />
       </div>
 
@@ -518,7 +506,6 @@ export default function CostsPage() {
                   ? COST_CATEGORY_LABELS[cat as CostCategory]
                   : cat;
               const actualNotes = getCostNotes(cat, 'actual');
-              const projectedNotes = getCostNotes(cat, 'projected');
 
               return (
                 <tr
@@ -545,11 +532,9 @@ export default function CostsPage() {
                   </td>
                   <td style={{ padding: '12px 8px', verticalAlign: 'top', maxWidth: 220 }}>
                     <textarea
-                      value={actualNotes || projectedNotes}
+                      value={actualNotes}
                       onChange={(e) => {
-                        // Only update notes for types that already have a DB entry
                         if (costMap[`${cat}-actual`]) handleNotesEdit(cat, 'actual', e.target.value);
-                        if (costMap[`${cat}-projected`]) handleNotesEdit(cat, 'projected', e.target.value);
                       }}
                       rows={2}
                       placeholder="Add particulars..."
@@ -731,7 +716,7 @@ export default function CostsPage() {
                 <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button
-                      onClick={() => { setShowAddForm(false); setAddForm({ category: 'aws', customCategory: '', type: 'actual', amount: '', notes: '' }); }}
+                      onClick={() => { setShowAddForm(false); setAddForm({ category: 'aws', customCategory: '', amount: '', notes: '' }); }}
                       style={{
                         padding: '7px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent', color: 'rgba(255,255,255,0.5)',

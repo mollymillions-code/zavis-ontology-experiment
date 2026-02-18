@@ -98,7 +98,7 @@ export interface ReceivableEntry {
 // ========== MONTHLY COSTS ==========
 
 export type CostCategory = 'aws' | 'chatwoot_seats' | 'payroll' | 'sales_spend' | 'chatwoot_sub' | 'commissions';
-export type CostType = 'actual' | 'projected';
+export type CostType = 'actual';
 
 export const COST_CATEGORY_LABELS: Record<CostCategory, string> = {
   aws: 'AWS Costs',

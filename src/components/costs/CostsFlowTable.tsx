@@ -36,6 +36,8 @@ function getCategoryLabel(cat: string) {
   return cat in COST_CATEGORY_LABELS ? COST_CATEGORY_LABELS[cat as CostCategory] : cat;
 }
 
+function normCat(cat: string) { return cat === 'chatwoot_sub' ? 'chatwoot_seats' : cat; }
+
 interface CostsFlowTableProps {
   costs: MonthlyCost[];
   totalSeats: number;
@@ -43,10 +45,8 @@ interface CostsFlowTableProps {
 }
 
 export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: CostsFlowTableProps) {
-  const [editedActuals, setEditedActuals] = useState<Record<string, number>>({});
+  const [editedValues, setEditedValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
-
-  function normCat(cat: string) { return cat === 'chatwoot_sub' ? 'chatwoot_seats' : cat; }
 
   // Fixed months: Feb 2026 → Dec 2026
   const months = useMemo(() => {
@@ -57,87 +57,76 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
     return result;
   }, []);
 
-  const { categories, projFlat, actPivot, projCatTotals, actCatTotals, projMonthTotals, actMonthTotals, projGrand, actGrand, chartData } = useMemo(() => {
+  const { categories, pivot, catTotals, monthTotals, grandTotal, chartData } = useMemo(() => {
     const categorySet = new Set<string>();
-    // Collect projected values from data (only first occurrence per category — flat rate)
-    const projFlat: Record<string, number> = {};
-    const actPivot: Record<string, Record<string, number>> = {};
-    const actCatTotals: Record<string, number> = {};
-    const actMonthTotals: Record<string, number> = {};
-    let actGrand = 0;
+    const pivot: Record<string, Record<string, number>> = {};
+    const catTotals: Record<string, number> = {};
+    const monthTotals: Record<string, number> = {};
+    let grandTotal = 0;
 
     for (const c of costs) {
       const cat = normCat(c.category);
       categorySet.add(cat);
-
-      if (c.type === 'projected') {
-        // Take the projected value (first/only month) as flat rate
-        projFlat[cat] = (projFlat[cat] || 0) + c.amount;
-      } else {
-        if (!actPivot[cat]) actPivot[cat] = {};
-        actPivot[cat][c.month] = (actPivot[cat][c.month] || 0) + c.amount;
-        actCatTotals[cat] = (actCatTotals[cat] || 0) + c.amount;
-        actMonthTotals[c.month] = (actMonthTotals[c.month] || 0) + c.amount;
-        actGrand += c.amount;
-      }
+      if (!pivot[cat]) pivot[cat] = {};
+      pivot[cat][c.month] = (pivot[cat][c.month] || 0) + c.amount;
+      catTotals[cat] = (catTotals[cat] || 0) + c.amount;
+      monthTotals[c.month] = (monthTotals[c.month] || 0) + c.amount;
+      grandTotal += c.amount;
     }
 
-    // Sort categories by projected amount (descending)
     const categories = Array.from(categorySet).sort(
-      (a, b) => (projFlat[b] || 0) - (projFlat[a] || 0)
+      (a, b) => (catTotals[b] || 0) - (catTotals[a] || 0)
     );
 
-    // Projected totals: flat per month × 11 months
-    const projCatTotals: Record<string, number> = {};
-    const projMonthTotals: Record<string, number> = {};
-    let projGrand = 0;
+    // For the chart, use the flat monthly cost (latest entered value per category)
+    // across all months
+    const latestFlat: Record<string, number> = {};
     for (const cat of categories) {
-      const flat = projFlat[cat] || 0;
-      projCatTotals[cat] = flat * months.length;
-      projGrand += flat * months.length;
-      for (const m of months) {
-        projMonthTotals[m] = (projMonthTotals[m] || 0) + flat;
+      // Use the latest month's value as the flat rate for projecting forward
+      const monthsWithData = Object.keys(pivot[cat] || {}).sort();
+      if (monthsWithData.length > 0) {
+        latestFlat[cat] = pivot[cat][monthsWithData[monthsWithData.length - 1]];
       }
     }
 
-    // Chart data — stacked by category, using projected flat values for all months
     const chartData = months.map((m) => {
       const row: Record<string, string | number> = { month: formatMonth(m) };
       for (const cat of categories) {
-        row[cat] = projFlat[cat] || 0;
+        // Use actual data if available, otherwise flat-project from latest
+        row[cat] = pivot[cat]?.[m] || latestFlat[cat] || 0;
       }
       return row;
     });
 
-    return { categories, projFlat, actPivot, projCatTotals, actCatTotals, projMonthTotals, actMonthTotals, projGrand, actGrand, chartData };
+    return { categories, pivot, catTotals, monthTotals, grandTotal, chartData };
   }, [costs, months]);
 
   // Editing helpers
-  function getActualValue(cat: string, month: string): number {
+  function getValue(cat: string, month: string): number {
     const key = `${cat}-${month}`;
-    if (editedActuals[key] !== undefined) return editedActuals[key];
-    return actPivot[cat]?.[month] || 0;
+    if (editedValues[key] !== undefined) return editedValues[key];
+    return pivot[cat]?.[month] || 0;
   }
 
-  function handleActualEdit(cat: string, month: string, value: string) {
+  function handleEdit(cat: string, month: string, value: string) {
     const key = `${cat}-${month}`;
-    setEditedActuals((prev) => ({ ...prev, [key]: parseFloat(value) || 0 }));
+    setEditedValues((prev) => ({ ...prev, [key]: parseFloat(value) || 0 }));
   }
 
-  const hasEdits = Object.keys(editedActuals).length > 0;
+  const hasEdits = Object.keys(editedValues).length > 0;
 
   async function handleSave() {
     if (!hasEdits) return;
     setSaving(true);
     try {
-      const promises = Object.entries(editedActuals).map(async ([key, amount]) => {
+      const promises = Object.entries(editedValues).map(async ([key, amount]) => {
         const parts = key.match(/^(.+?)-(\d{4}-\d{2})$/);
         if (!parts) return;
         const cat = parts[1];
         const month = parts[2];
 
         const existing = costs.find((c) =>
-          normCat(c.category) === cat && c.month === month && c.type === 'actual'
+          normCat(c.category) === cat && c.month === month
         );
 
         if (existing) {
@@ -155,7 +144,7 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
               month,
               category: cat,
               amount,
-              type: 'actual' as const,
+              type: 'actual',
               notes: '',
               createdAt: new Date().toISOString(),
             }),
@@ -164,7 +153,7 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
       });
 
       await Promise.all(promises);
-      setEditedActuals({});
+      setEditedValues({});
       onCostsUpdated();
     } finally {
       setSaving(false);
@@ -274,7 +263,7 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
           background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
         }}>
           <p style={{ margin: 0, fontSize: 12, color: '#d97706', fontFamily: "'DM Sans', sans-serif" }}>
-            You have unsaved changes to actual costs.
+            You have unsaved changes.
           </p>
           <button onClick={handleSave} disabled={saving} style={{
             background: '#00c853', border: 'none', borderRadius: 8, padding: '8px 16px',
@@ -287,68 +276,44 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
         </div>
       )}
 
-      {/* ── Multi-Month Table: Feb–Dec 2026, Proj (flat) + Actual (editable) ── */}
+      {/* ── Multi-Month Table: Feb–Dec 2026 ── */}
       <div style={{
         background: '#ffffff', borderRadius: 12, border: '1px solid #e0dbd2',
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflowX: 'auto',
       }}>
-        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: months.length * 150 + 260 }}>
+        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: months.length * 90 + 260 }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #e0dbd2' }}>
-              <th rowSpan={2} style={{
+            <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
+              <th style={{
                 padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#666',
                 textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.5,
                 fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
                 position: 'sticky', left: 0, background: '#fff', zIndex: 3, minWidth: 160,
-                borderBottom: '2px solid #e0dbd2',
               }}>Category</th>
-              <th rowSpan={2} style={{
+              <th style={{
                 padding: '10px 6px', textAlign: 'right', fontWeight: 600, color: '#666',
                 textTransform: 'uppercase', fontSize: 9, letterSpacing: 0.3,
                 fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', minWidth: 70,
-                borderBottom: '2px solid #e0dbd2',
               }}>Per Seat</th>
               {months.map((m) => (
-                <th key={m} colSpan={2} style={{
-                  padding: '8px 4px 4px', textAlign: 'center', fontWeight: 600, color: '#666',
+                <th key={m} style={{
+                  padding: '10px 6px', textAlign: 'right', fontWeight: 600, color: '#666',
                   fontSize: 9, letterSpacing: 0.3, fontFamily: "'Space Mono', monospace",
                   whiteSpace: 'nowrap', borderLeft: '1px solid #e0dbd2',
                 }}>{formatMonth(m)}</th>
               ))}
-              <th colSpan={2} style={{
-                padding: '8px 4px 4px', textAlign: 'center', fontWeight: 700, color: '#1a1a1a',
+              <th style={{
+                padding: '10px 6px', textAlign: 'right', fontWeight: 700, color: '#1a1a1a',
                 fontSize: 10, letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif",
                 textTransform: 'uppercase', whiteSpace: 'nowrap', borderLeft: '2px solid #e0dbd2',
               }}>Total</th>
-            </tr>
-            <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
-              {months.flatMap((m) => [
-                <th key={`${m}-p`} style={{
-                  padding: '2px 4px 6px', textAlign: 'right', fontSize: 8, fontWeight: 600,
-                  color: '#d97706', fontFamily: "'DM Sans', sans-serif", letterSpacing: 0.3,
-                  borderLeft: '1px solid #e0dbd2',
-                }}>Proj</th>,
-                <th key={`${m}-a`} style={{
-                  padding: '2px 4px 6px', textAlign: 'right', fontSize: 8, fontWeight: 600,
-                  color: '#dc2626', fontFamily: "'DM Sans', sans-serif", letterSpacing: 0.3,
-                }}>Actual</th>,
-              ])}
-              <th style={{
-                padding: '2px 4px 6px', textAlign: 'right', fontSize: 8, fontWeight: 600,
-                color: '#d97706', fontFamily: "'DM Sans', sans-serif", borderLeft: '2px solid #e0dbd2',
-              }}>Proj</th>
-              <th style={{
-                padding: '2px 4px 6px', textAlign: 'right', fontSize: 8, fontWeight: 600,
-                color: '#dc2626', fontFamily: "'DM Sans', sans-serif",
-              }}>Actual</th>
             </tr>
           </thead>
           <tbody>
             {categories.map((cat, i) => {
               const rowBg = i % 2 === 0 ? '#fafaf8' : '#ffffff';
-              const flatProj = projFlat[cat] || 0;
-              const actTotal = actCatTotals[cat] || 0;
-              const perSeat = totalSeats > 0 && actTotal > 0 ? actTotal / totalSeats : 0;
+              const catTotal = catTotals[cat] || 0;
+              const perSeat = totalSeats > 0 && catTotal > 0 ? catTotal / totalSeats : 0;
 
               return (
                 <tr key={cat} style={{ borderBottom: '1px solid #e0dbd2', background: rowBg }}>
@@ -361,45 +326,34 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
                     padding: '8px 6px', textAlign: 'right',
                     fontFamily: "'Space Mono', monospace", fontSize: 9, color: '#999',
                   }}>{perSeat > 0 ? formatAED(perSeat, 0) : '—'}</td>
-                  {months.flatMap((m) => {
-                    const act = getActualValue(cat, m);
+                  {months.map((m) => {
+                    const val = getValue(cat, m);
                     const editKey = `${cat}-${m}`;
-                    const isEdited = editedActuals[editKey] !== undefined;
-                    return [
-                      <td key={`${m}-p`} style={{
-                        padding: '4px 6px', textAlign: 'right',
-                        fontFamily: "'Space Mono', monospace", fontSize: 10,
-                        fontWeight: flatProj > 0 ? 600 : 400,
-                        color: flatProj > 0 ? '#d97706' : '#ccc',
-                        background: flatProj > 0 ? 'rgba(245,158,11,0.06)' : undefined,
-                        borderLeft: '1px solid #e0dbd2',
-                      }}>{flatProj > 0 ? formatAED(flatProj, 0) : ''}</td>,
-                      <td key={`${m}-a`} style={{
+                    const isEdited = editedValues[editKey] !== undefined;
+                    return (
+                      <td key={m} style={{
                         padding: '2px 2px', textAlign: 'right',
-                        background: isEdited ? 'rgba(239,68,68,0.08)' : (act > 0 ? 'rgba(239,68,68,0.04)' : undefined),
+                        background: isEdited ? 'rgba(0,200,83,0.08)' : (val > 0 ? 'rgba(0,200,83,0.03)' : undefined),
+                        borderLeft: '1px solid #e0dbd2',
                       }}>
                         <input
-                          type="number" value={act || ''} placeholder="—"
-                          onChange={(e) => handleActualEdit(cat, m, e.target.value)}
+                          type="number" value={val || ''} placeholder="—"
+                          onChange={(e) => handleEdit(cat, m, e.target.value)}
                           style={{
                             width: '100%', maxWidth: 72, padding: '4px 4px',
                             textAlign: 'right', border: 'none', background: 'transparent',
                             fontFamily: "'Space Mono', monospace", fontSize: 10,
-                            fontWeight: 600, color: act > 0 ? '#dc2626' : '#ccc', outline: 'none',
+                            fontWeight: 600, color: val > 0 ? '#1a1a1a' : '#ccc', outline: 'none',
                           }}
                         />
-                      </td>,
-                    ];
+                      </td>
+                    );
                   })}
                   <td style={{
                     padding: '8px 6px', textAlign: 'right',
                     fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 10,
-                    color: '#d97706', borderLeft: '2px solid #e0dbd2',
-                  }}>{formatAED(projCatTotals[cat] || 0, 0)}</td>
-                  <td style={{
-                    padding: '8px 6px', textAlign: 'right',
-                    fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 10, color: '#dc2626',
-                  }}>{formatAED(actTotal, 0)}</td>
+                    color: '#1a1a1a', borderLeft: '2px solid #e0dbd2',
+                  }}>{formatAED(catTotal, 0)}</td>
                 </tr>
               );
             })}
@@ -412,26 +366,18 @@ export default function CostsFlowTable({ costs, totalSeats, onCostsUpdated }: Co
                 position: 'sticky', left: 0, background: '#f5f0e8', zIndex: 1,
               }}>Monthly Total</td>
               <td />
-              {months.flatMap((m) => [
-                <td key={`${m}-tp`} style={{
+              {months.map((m) => (
+                <td key={m} style={{
                   padding: '10px 6px', textAlign: 'right',
                   fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 10,
-                  color: '#d97706', borderLeft: '1px solid #e0dbd2',
-                }}>{(projMonthTotals[m] || 0) > 0 ? formatAED(projMonthTotals[m], 0) : ''}</td>,
-                <td key={`${m}-ta`} style={{
-                  padding: '10px 6px', textAlign: 'right',
-                  fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 10, color: '#dc2626',
-                }}>{(actMonthTotals[m] || 0) > 0 ? formatAED(actMonthTotals[m], 0) : ''}</td>,
-              ])}
+                  color: '#1a1a1a', borderLeft: '1px solid #e0dbd2',
+                }}>{(monthTotals[m] || 0) > 0 ? formatAED(monthTotals[m], 0) : ''}</td>
+              ))}
               <td style={{
                 padding: '10px 6px', textAlign: 'right',
                 fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11,
-                color: '#d97706', borderLeft: '2px solid #e0dbd2',
-              }}>{formatAED(projGrand, 0)}</td>
-              <td style={{
-                padding: '10px 6px', textAlign: 'right',
-                fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 11, color: '#dc2626',
-              }}>{formatAED(actGrand, 0)}</td>
+                color: '#1a1a1a', borderLeft: '2px solid #e0dbd2',
+              }}>{formatAED(grandTotal, 0)}</td>
             </tr>
           </tfoot>
         </table>
