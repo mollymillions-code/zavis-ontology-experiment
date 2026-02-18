@@ -402,6 +402,18 @@ export interface CompanyConfig {
   bankDetails: string;
 }
 
+// ========== PAYROLL ==========
+
+export interface PayrollEntry {
+  id: string;
+  name: string;
+  role: string;
+  monthlySalary: number;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+}
+
 // ========== DASHBOARD METRICS ==========
 
 export interface DashboardMetrics {

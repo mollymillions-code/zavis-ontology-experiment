@@ -216,3 +216,17 @@ export const sequences = pgTable('sequences', {
   name: text('name').primaryKey(), // 'invoice' or 'payment'
   currentValue: integer('current_value').notNull().default(0),
 });
+
+// ═══════════════════════════════════════════════════════════
+// PAYROLL
+// ═══════════════════════════════════════════════════════════
+
+export const payrollEntries = pgTable('payroll_entries', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  role: text('role').notNull(),
+  monthlySalary: numeric('monthly_salary', { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

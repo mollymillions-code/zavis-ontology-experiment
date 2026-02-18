@@ -15,6 +15,7 @@ import type {
   InvoiceLineItem,
   CatalogItem,
   PaymentReceived,
+  PayrollEntry,
 } from '@/lib/models/platform-types';
 
 // ===== CLIENTS =====
@@ -461,6 +462,36 @@ export function paymentToDbValues(p: PaymentReceived) {
     mode: p.mode,
     referenceNumber: p.referenceNumber ?? null,
     status: p.status,
+    notes: p.notes ?? null,
+    createdAt: new Date(p.createdAt),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAYROLL ENTRIES
+// ═══════════════════════════════════════════════════════════
+
+export function dbRowToPayrollEntry(row: Record<string, unknown>): PayrollEntry {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    role: row.role as string,
+    monthlySalary: Number(row.monthlySalary) || 0,
+    isActive: row.isActive as boolean,
+    notes: (row.notes as string) || undefined,
+    createdAt: row.createdAt instanceof Date
+      ? (row.createdAt as Date).toISOString()
+      : (row.createdAt as string),
+  };
+}
+
+export function payrollEntryToDbValues(p: PayrollEntry) {
+  return {
+    id: p.id,
+    name: p.name,
+    role: p.role,
+    monthlySalary: String(p.monthlySalary),
+    isActive: p.isActive,
     notes: p.notes ?? null,
     createdAt: new Date(p.createdAt),
   };
