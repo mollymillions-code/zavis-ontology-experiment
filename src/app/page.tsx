@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
 import RevenueDonut from '@/components/charts/RevenueDonut';
@@ -74,7 +74,6 @@ export default function DashboardPage() {
   const clients = useClientStore((s) => s.clients);
   const receivables = useClientStore((s) => s.receivables);
   const { costs: monthlyCosts, loading: costsLoading } = useMonthlyCosts();
-  const cashFlowView = 'actual' as const;
   const latestSnapshot = useSnapshotStore((s) => s.getLatestSnapshot());
   const currentMonth = new Date().toISOString().slice(0, 7);
   const previousSnapshot = useSnapshotStore((s) => s.getPreviousSnapshot(latestSnapshot?.month || currentMonth));
@@ -169,7 +168,7 @@ export default function DashboardPage() {
       const net = inAmount - outAmount;
       return { month: m, label: fmtMonth(m), inAmount, outAmount, net };
     });
-  }, [receivables, monthlyCosts, cashFlowView]);
+  }, [receivables, monthlyCosts]);
 
   return (
     <PageShell
