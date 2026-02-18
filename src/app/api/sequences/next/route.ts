@@ -11,12 +11,18 @@ export async function POST(req: Request) {
   }
 
   // Upsert: increment if exists, create with 1 if not
+  // For invoices, enforce minimum of 35 so numbering starts at INV-000035
+  const isInvoice = name === 'invoice';
   const result = await db
     .insert(sequences)
-    .values({ name, currentValue: 1 })
+    .values({ name, currentValue: isInvoice ? 35 : 1 })
     .onConflictDoUpdate({
       target: sequences.name,
-      set: { currentValue: sql`${sequences.currentValue} + 1` },
+      set: {
+        currentValue: isInvoice
+          ? sql`GREATEST(${sequences.currentValue}, 34) + 1`
+          : sql`${sequences.currentValue} + 1`,
+      },
     })
     .returning({ currentValue: sequences.currentValue });
 

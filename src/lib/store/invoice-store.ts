@@ -44,10 +44,10 @@ const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
   website: 'https://zavis.ai',
   logoText: 'ZAVIS',
   defaultNotes: 'Thanks for your business.',
-  bankDetails: `Bank Name: Emirates NBD
-Account Name: H A S H Information Technology Co. L.L.C
-IBAN: (to be configured)
-SWIFT: (to be configured)`,
+  bankDetails: `Bank Name: WIO Bank
+Account Name: H A S H INFORMATION TECHNOLOGY CO. L.L.C
+IBAN: AE900860000009544848890
+BIC/SWIFT: WIOBAEADXXX`,
 };
 
 export const useInvoiceStore = create<InvoiceState>()(

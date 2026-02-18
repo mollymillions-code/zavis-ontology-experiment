@@ -1,7 +1,7 @@
 'use client';
 
 import type { Invoice, Client } from '@/lib/models/platform-types';
-import { CURRENCY_SYMBOLS } from '@/lib/models/platform-types';
+import { CURRENCY_SYMBOLS, PAYMENT_TERMS_LABELS } from '@/lib/models/platform-types';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import InvoiceStatusBadge from './InvoiceStatusBadge';
 
@@ -116,6 +116,9 @@ export default function InvoicePDFPreview({ invoice, client }: InvoicePDFPreview
           {client.email && (
             <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{client.email}</div>
           )}
+          {invoice.showTrn && client.trn && (
+            <div style={{ fontSize: 11, color: '#444', marginTop: 4, fontWeight: 600 }}>TRN: {client.trn}</div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
@@ -125,7 +128,11 @@ export default function InvoicePDFPreview({ invoice, client }: InvoicePDFPreview
             </div>
             <div>
               <span style={{ fontSize: 10, color: '#999', marginRight: 8 }}>Terms:</span>
-              <span style={{ fontSize: 11, fontWeight: 600 }}>{invoice.terms.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+              <span style={{ fontSize: 11, fontWeight: 600 }}>
+                {invoice.terms === 'custom'
+                  ? (invoice.customTermsLabel || 'Custom Terms')
+                  : PAYMENT_TERMS_LABELS[invoice.terms]}
+              </span>
             </div>
             <div>
               <span style={{ fontSize: 10, color: '#999', marginRight: 8 }}>Due Date:</span>
@@ -149,11 +156,16 @@ export default function InvoicePDFPreview({ invoice, client }: InvoicePDFPreview
         <tbody>
           {invoice.lineItems.map((item, i) => (
             <tr key={item.id} style={{ borderBottom: '1px solid #e0dbd2' }}>
-              <td style={{ padding: '10px', fontSize: 11, color: '#999', fontFamily: "'Space Mono', monospace" }}>{i + 1}</td>
-              <td style={{ padding: '10px', fontSize: 12, fontWeight: 500 }}>{item.description}</td>
-              <td style={{ padding: '10px', textAlign: 'right', fontSize: 11, fontFamily: "'Space Mono', monospace" }}>{item.quantity}</td>
-              <td style={{ padding: '10px', textAlign: 'right', fontSize: 11, fontFamily: "'Space Mono', monospace" }}>{fmt(item.rate)}</td>
-              <td style={{ padding: '10px', textAlign: 'right', fontSize: 11, fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>{fmt(item.amount)}</td>
+              <td style={{ padding: '10px', fontSize: 11, color: '#999', fontFamily: "'Space Mono', monospace", verticalAlign: 'top' }}>{i + 1}</td>
+              <td style={{ padding: '10px', verticalAlign: 'top' }}>
+                <div style={{ fontSize: 12, fontWeight: 500 }}>{item.description}</div>
+                {item.itemNote && (
+                  <div style={{ fontSize: 10, color: '#888', marginTop: 3, lineHeight: 1.5 }}>{item.itemNote}</div>
+                )}
+              </td>
+              <td style={{ padding: '10px', textAlign: 'right', fontSize: 11, fontFamily: "'Space Mono', monospace", verticalAlign: 'top' }}>{item.quantity}</td>
+              <td style={{ padding: '10px', textAlign: 'right', fontSize: 11, fontFamily: "'Space Mono', monospace", verticalAlign: 'top' }}>{fmt(item.rate)}</td>
+              <td style={{ padding: '10px', textAlign: 'right', fontSize: 11, fontWeight: 700, fontFamily: "'Space Mono', monospace", verticalAlign: 'top' }}>{fmt(item.amount)}</td>
             </tr>
           ))}
         </tbody>

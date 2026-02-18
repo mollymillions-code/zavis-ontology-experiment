@@ -48,6 +48,11 @@ export default function LineItemRow({
     }
   }
 
+  function handleClearItem() {
+    setCustomMode(false);
+    recalcAmount({ itemId: undefined, description: '', rate: 0, itemNote: undefined });
+  }
+
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '6px 8px',
@@ -67,46 +72,53 @@ export default function LineItemRow({
     width: 80,
   };
 
+  const noteStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '4px 8px',
+    border: '1px solid #e8e4de',
+    borderRadius: 6,
+    fontSize: 11,
+    fontFamily: "'DM Sans', sans-serif",
+    color: '#888',
+    background: '#fafafa',
+    outline: 'none',
+    resize: 'none' as const,
+    lineHeight: 1.4,
+  };
+
+  const linkBtnStyle: React.CSSProperties = {
+    border: 'none',
+    background: 'none',
+    padding: 0,
+    fontSize: 10,
+    color: '#2979ff',
+    cursor: 'pointer',
+    fontFamily: "'DM Sans', sans-serif",
+    textAlign: 'left',
+  };
+
+  // Whether an item (catalog or custom) has been chosen
+  const itemChosen = !!item.itemId || customMode;
+
   return (
     <tr style={{ borderBottom: '1px solid #e0dbd2' }}>
-      <td style={{ padding: '8px 6px', color: '#999', fontSize: 11, fontFamily: "'Space Mono', monospace" }}>
+      <td style={{ padding: '8px 6px', color: '#999', fontSize: 11, fontFamily: "'Space Mono', monospace", verticalAlign: 'top', paddingTop: 14 }}>
         {index + 1}
       </td>
       <td style={{ padding: '8px 6px' }}>
         {readOnly ? (
-          <span style={{ fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#1a1a1a' }}>
-            {item.description}
-          </span>
-        ) : customMode ? (
-          /* Custom item mode — editable text input */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <input
-              type="text"
-              value={item.description}
-              onChange={(e) => onChange({ ...item, description: e.target.value })}
-              placeholder="Type item name..."
-              autoFocus
-              style={{ ...inputStyle, borderColor: '#60a5fa' }}
-            />
-            <button
-              type="button"
-              onClick={() => setCustomMode(false)}
-              style={{
-                border: 'none',
-                background: 'none',
-                padding: 0,
-                fontSize: 10,
-                color: '#2979ff',
-                cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif",
-                textAlign: 'left',
-              }}
-            >
-              Choose from catalog
-            </button>
+          <div>
+            <span style={{ fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#1a1a1a' }}>
+              {item.description}
+            </span>
+            {item.itemNote && (
+              <div style={{ fontSize: 11, color: '#888', marginTop: 3, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.4 }}>
+                {item.itemNote}
+              </div>
+            )}
           </div>
-        ) : (
-          /* Catalog selection dropdown */
+        ) : !itemChosen ? (
+          /* No item selected yet — show catalog dropdown */
           <select
             value={item.itemId || ''}
             onChange={(e) => handleCatalogSelect(e.target.value)}
@@ -114,12 +126,38 @@ export default function LineItemRow({
           >
             <option value="">Custom item...</option>
             {catalogItems.filter((c) => c.isActive).map((c) => (
-              <option key={c.id} value={c.id}>{c.name} ({c.rate} {c.unit})</option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+        ) : (
+          /* Item chosen (catalog or custom) — editable name + optional note */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <input
+              type="text"
+              value={item.description}
+              onChange={(e) => onChange({ ...item, description: e.target.value })}
+              placeholder="Item name..."
+              autoFocus={customMode && !item.description}
+              style={customMode ? { ...inputStyle, borderColor: '#60a5fa' } : inputStyle}
+            />
+            <textarea
+              value={item.itemNote || ''}
+              onChange={(e) => onChange({ ...item, itemNote: e.target.value || undefined })}
+              placeholder="Description / notes (optional)"
+              rows={2}
+              style={noteStyle}
+            />
+            <button
+              type="button"
+              onClick={handleClearItem}
+              style={linkBtnStyle}
+            >
+              {customMode ? 'Choose from catalog' : 'Change item'}
+            </button>
+          </div>
         )}
       </td>
-      <td style={{ padding: '8px 6px' }}>
+      <td style={{ padding: '8px 6px', verticalAlign: 'top', paddingTop: 14 }}>
         <input
           type="number"
           min={0}
@@ -129,7 +167,7 @@ export default function LineItemRow({
           style={numInputStyle}
         />
       </td>
-      <td style={{ padding: '8px 6px' }}>
+      <td style={{ padding: '8px 6px', verticalAlign: 'top', paddingTop: 14 }}>
         <input
           type="number"
           min={0}
@@ -140,7 +178,7 @@ export default function LineItemRow({
           style={numInputStyle}
         />
       </td>
-      <td style={{ padding: '8px 6px' }}>
+      <td style={{ padding: '8px 6px', verticalAlign: 'top', paddingTop: 14 }}>
         {readOnly ? (
           <span style={{ fontSize: 12, fontFamily: "'Space Mono', monospace", color: '#666' }}>
             {item.discountValue > 0
@@ -186,11 +224,13 @@ export default function LineItemRow({
         fontWeight: 700,
         fontSize: 12,
         color: '#1a1a1a',
+        verticalAlign: 'top',
+        paddingTop: 14,
       }}>
         {item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       {!readOnly && (
-        <td style={{ padding: '8px 6px' }}>
+        <td style={{ padding: '8px 6px', verticalAlign: 'top', paddingTop: 14 }}>
           <button
             onClick={onRemove}
             style={{

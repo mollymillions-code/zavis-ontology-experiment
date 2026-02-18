@@ -32,6 +32,8 @@ export function calculateDueDate(invoiceDate: string, terms: PaymentTerms): stri
     case 'due_end_of_next_month':
       date.setMonth(date.getMonth() + 2, 0); // last day of next month
       return date.toISOString().split('T')[0];
+    case 'custom':
+      return invoiceDate; // user sets due date manually
     default:
       date.setDate(date.getDate() + 30);
       return date.toISOString().split('T')[0];

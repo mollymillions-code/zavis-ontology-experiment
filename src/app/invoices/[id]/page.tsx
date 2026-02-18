@@ -19,6 +19,7 @@ export default function InvoiceDetailPage() {
 
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
 
   useEffect(() => {
     hydrateFromDb();
@@ -92,6 +93,28 @@ export default function InvoiceDetailPage() {
     window.open(`/api/invoices/${invoice.id}/pdf`, '_blank');
   }
 
+  async function handlePayViaStripe() {
+    if (!invoice) return;
+    setStripeLoading(true);
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to create Stripe session');
+      }
+    } catch {
+      alert('Failed to initiate Stripe payment');
+    } finally {
+      setStripeLoading(false);
+    }
+  }
+
   const btnStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '8px 14px', borderRadius: 8,
@@ -138,6 +161,22 @@ export default function InvoiceDetailPage() {
               style={{ ...btnStyle, background: '#2196f3', color: '#ffffff', border: 'none' }}
             >
               <CreditCard size={14} /> Record Payment
+            </button>
+          )}
+          {canRecordPayment(invoice.status) && (
+            <button
+              onClick={handlePayViaStripe}
+              disabled={stripeLoading}
+              style={{
+                ...btnStyle,
+                background: '#635bff',
+                color: '#ffffff',
+                border: 'none',
+                opacity: stripeLoading ? 0.7 : 1,
+              }}
+            >
+              <CreditCard size={14} />
+              {stripeLoading ? 'Redirecting...' : 'Pay via Stripe'}
             </button>
           )}
           <button onClick={handleDownloadPDF} style={btnStyle}>

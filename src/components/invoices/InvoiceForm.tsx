@@ -49,6 +49,8 @@ export default function InvoiceForm({
   );
   const [terms, setTerms] = useState<PaymentTerms>(invoice?.terms || 'net_30');
   const [dueDate, setDueDate] = useState(invoice?.dueDate || '');
+  const [customTermsLabel, setCustomTermsLabel] = useState(invoice?.customTermsLabel || '');
+  const [showTrn, setShowTrn] = useState(invoice?.showTrn ?? false);
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>(
     invoice?.lineItems || prefillLineItems || []
   );
@@ -61,6 +63,8 @@ export default function InvoiceForm({
   const [receivableId] = useState(invoice?.receivableId || prefillReceivableId || null);
   const [contractId, setContractId] = useState<string | null>(invoice?.contractId || null);
 
+  const selectedClient = clients.find((c) => c.id === clientId) || null;
+
   // Auto-generate invoice number
   useEffect(() => {
     if (!isEdit && !invoiceNumber) {
@@ -68,12 +72,19 @@ export default function InvoiceForm({
     }
   }, [isEdit, invoiceNumber, getNextNumber]);
 
-  // Recalculate due date when invoice date or terms change
+  // Recalculate due date when invoice date or terms change (skip for custom — user sets it)
   useEffect(() => {
-    if (invoiceDate && terms) {
+    if (invoiceDate && terms && terms !== 'custom') {
       setDueDate(calculateDueDate(invoiceDate, terms));
     }
   }, [invoiceDate, terms]);
+
+  // Auto-enable TRN when client has a TRN
+  useEffect(() => {
+    if (selectedClient?.trn) {
+      setShowTrn(true);
+    }
+  }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-set terms + resolve contract + pre-populate line items from revenue streams
   function handleClientSelect(client: Client) {
@@ -134,6 +145,8 @@ export default function InvoiceForm({
           balanceDue: totals.total - (invoice.amountPaid || 0),
           customerNotes,
           termsAndConditions,
+          customTermsLabel: terms === 'custom' ? customTermsLabel : null,
+          showTrn,
           invoiceDate,
           terms,
           dueDate,
@@ -154,6 +167,8 @@ export default function InvoiceForm({
           invoiceDate,
           terms,
           dueDate,
+          customTermsLabel: terms === 'custom' ? customTermsLabel : null,
+          showTrn,
           lineItems,
           subtotal: totals.subtotal,
           total: totals.total,
@@ -328,15 +343,47 @@ export default function InvoiceForm({
               </div>
             </div>
 
+            {terms === 'custom' && (
+              <div>
+                <label style={labelStyle}>Custom Terms Description</label>
+                <input
+                  type="text"
+                  value={customTermsLabel}
+                  onChange={(e) => setCustomTermsLabel(e.target.value)}
+                  placeholder="e.g. 50% upfront, 50% on delivery"
+                  style={inputStyle}
+                />
+              </div>
+            )}
+
             <div>
               <label style={labelStyle}>Due Date</label>
               <input
                 type="date"
                 value={dueDate}
-                readOnly
-                style={{ ...inputStyle, background: '#faf8f4' }}
+                onChange={(e) => setDueDate(e.target.value)}
+                readOnly={terms !== 'custom'}
+                style={{ ...inputStyle, background: terms !== 'custom' ? '#faf8f4' : '#ffffff' }}
               />
             </div>
+
+            {selectedClient?.trn && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="showTrn"
+                  checked={showTrn}
+                  onChange={(e) => setShowTrn(e.target.checked)}
+                  style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#2979ff' }}
+                />
+                <label
+                  htmlFor="showTrn"
+                  style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer', textTransform: 'none', fontSize: 12 }}
+                >
+                  Include TRN on invoice ({selectedClient.trn})
+                </label>
+              </div>
+            )}
           </div>
         </div>
 

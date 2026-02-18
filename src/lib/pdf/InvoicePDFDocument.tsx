@@ -1,7 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import type { Invoice, Client, CompanyConfig } from '@/lib/models/platform-types';
-import { CURRENCY_SYMBOLS, INVOICE_STATUS_LABELS } from '@/lib/models/platform-types';
+import { CURRENCY_SYMBOLS, INVOICE_STATUS_LABELS, PAYMENT_TERMS_LABELS } from '@/lib/models/platform-types';
 
 const styles = StyleSheet.create({
   page: {
@@ -251,6 +251,9 @@ export default function InvoicePDFDocument({ invoice, client, companyConfig }: I
               </>
             )}
             {client.email && <Text style={styles.companyInfo}>{client.email}</Text>}
+            {invoice.showTrn && client.trn && (
+              <Text style={[styles.companyInfo, { marginTop: 4 }]}>TRN: {client.trn}</Text>
+            )}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <View style={styles.detailRow}>
@@ -259,7 +262,11 @@ export default function InvoicePDFDocument({ invoice, client, companyConfig }: I
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Terms:</Text>
-              <Text style={styles.detailValue}>{invoice.terms.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</Text>
+              <Text style={styles.detailValue}>
+                {invoice.terms === 'custom'
+                  ? (invoice.customTermsLabel || 'Custom Terms')
+                  : PAYMENT_TERMS_LABELS[invoice.terms]}
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Due Date:</Text>
@@ -280,7 +287,12 @@ export default function InvoicePDFDocument({ invoice, client, companyConfig }: I
           {invoice.lineItems.map((item, i) => (
             <View key={item.id} style={styles.tableRow}>
               <Text style={[{ fontSize: 9, color: '#999' }, styles.colNum]}>{i + 1}</Text>
-              <Text style={[{ fontSize: 9 }, styles.colDesc]}>{item.description}</Text>
+              <View style={styles.colDesc}>
+                <Text style={{ fontSize: 9 }}>{item.description}</Text>
+                {item.itemNote && (
+                  <Text style={{ fontSize: 8, color: '#888', marginTop: 2, lineHeight: 1.4 }}>{item.itemNote}</Text>
+                )}
+              </View>
               <Text style={[{ fontSize: 9 }, styles.colQty]}>{item.quantity}</Text>
               <Text style={[{ fontSize: 9 }, styles.colRate]}>{fmt(item.rate)}</Text>
               <Text style={[{ fontSize: 9, fontFamily: 'Helvetica-Bold' }, styles.colAmount]}>{fmt(item.amount)}</Text>

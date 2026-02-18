@@ -258,7 +258,7 @@ export interface ActionLogEntry {
 
 export type InvoiceStatus = 'draft' | 'sent' | 'partially_paid' | 'unpaid' | 'overdue' | 'paid' | 'void';
 
-export type PaymentTerms = 'due_on_receipt' | 'net_14' | 'net_30' | 'net_45' | 'net_60' | 'due_end_of_month' | 'due_end_of_next_month';
+export type PaymentTerms = 'due_on_receipt' | 'net_14' | 'net_30' | 'net_45' | 'net_60' | 'due_end_of_month' | 'due_end_of_next_month' | 'custom';
 
 export type InvoiceCurrency = 'AED' | 'USD' | 'INR' | 'GBP';
 
@@ -276,6 +276,7 @@ export const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
   net_60: 'Net 60',
   due_end_of_month: 'Due End of Month',
   due_end_of_next_month: 'Due End of Next Month',
+  custom: 'Custom Terms',
 };
 
 export const PAYMENT_TERMS_DAYS: Record<PaymentTerms, number | null> = {
@@ -286,6 +287,7 @@ export const PAYMENT_TERMS_DAYS: Record<PaymentTerms, number | null> = {
   net_60: 60,
   due_end_of_month: null, // calculated dynamically
   due_end_of_next_month: null,
+  custom: null,
 };
 
 export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
@@ -328,6 +330,7 @@ export interface InvoiceLineItem {
   itemId?: string; // FK to catalog_items (optional)
   revenueStreamId?: string; // FK to revenue_streams — links line item to the stream it bills for
   description: string;
+  itemNote?: string; // Optional description/detail line shown below item name on invoice
   quantity: number;
   rate: number;
   discountType: 'percent' | 'flat';
@@ -353,6 +356,8 @@ export interface Invoice {
   balanceDue: number;
   customerNotes?: string | null;
   termsAndConditions?: string | null;
+  customTermsLabel?: string | null; // Label shown when terms === 'custom'
+  showTrn?: boolean; // Whether to include the client's TRN on the invoice
   sentAt?: string | null;
   paidAt?: string | null;
   voidedAt?: string | null;
