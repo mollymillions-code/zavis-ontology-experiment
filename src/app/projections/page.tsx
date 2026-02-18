@@ -391,7 +391,7 @@ export default function ProjectionsPage() {
         </div>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, alignItems: 'start' }}>
         {/* ===== SIDEBAR ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'sticky', top: 100 }}>
           <div style={{ ...cardStyle, padding: 20, maxHeight: 'calc(100vh - 130px)', overflowY: 'auto' }}>
@@ -423,7 +423,7 @@ export default function ProjectionsPage() {
         {/* ===== MAIN CONTENT ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Summary KPI Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             <KPICard title="Current MRR" value={formatAED(currentMRR)} accent="#666" />
             <KPICard title={`Projected MRR (M${timeline})`} value={formatAED(Math.round(result.endingMRR))} accent="#00c853" />
             <KPICard title="Projected ARR" value={formatAED(Math.round(result.endingARR))} accent="#2979ff" />
@@ -463,7 +463,7 @@ export default function ProjectionsPage() {
           </div>
 
           {/* Charts Row: Clients+Seats + Revenue vs Cost */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
             {/* Client & Seat Count */}
             <div style={chartCardStyle}>
               <div style={dotGridOverlay} />
@@ -527,7 +527,7 @@ export default function ProjectionsPage() {
           </div>
 
           {/* Charts Row: Gross Margin + Cumulative P&L */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
             {/* Gross Margin */}
             <div style={chartCardStyle}>
               <div style={dotGridOverlay} />

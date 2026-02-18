@@ -264,6 +264,7 @@ export default function CostsPage() {
     borderRadius: 16,
     padding: 24,
     boxShadow: '0 8px 32px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.04)',
+    overflowX: 'auto' as const,
   };
 
   const inputStyle = {
@@ -382,7 +383,7 @@ export default function CostsPage() {
 
       {/* KPI Cards */}
       <div
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}
       >
         <KPICard title="Monthly Burn" value={formatAED(totalActual)} accent="#ff6e40" />
         <KPICard title="Annual Burn" value={formatAED(totalActual * 12)} accent="#60a5fa" />

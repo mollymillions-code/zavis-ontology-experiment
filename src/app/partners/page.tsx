@@ -191,7 +191,7 @@ export default function SalesPartnersPage() {
       />
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         <KPICard
           title="Active Partners"
           value={totalMetrics.partners.toString()}
@@ -591,7 +591,7 @@ export default function SalesPartnersPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
               gap: 12,
               fontSize: 12,
               fontFamily: 'DM Sans, sans-serif',

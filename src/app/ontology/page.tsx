@@ -79,7 +79,7 @@ export default function OntologyPage() {
       subtitle={`${objectTypes.length} object types · ${linkTypes.length} link types · ${actionTypes.length} actions`}
     >
       {/* Summary KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KPICard title="Object Types" value={formatNumber(objectTypes.length)} subtitle="Defined" accent="#a78bfa" />
         <KPICard title="Link Types" value={formatNumber(linkTypes.length)} subtitle="Relationships" accent="#60a5fa" />
         <KPICard title="Action Types" value={formatNumber(actionTypes.length)} subtitle="Auditable mutations" accent="#00c853" />
@@ -88,7 +88,7 @@ export default function OntologyPage() {
       </div>
 
       {/* Object Types + Link Types */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
         {/* Object Types */}
         <div style={cardStyle}>
           <div className="flex items-center gap-2" style={{ marginBottom: 16 }}>
@@ -191,7 +191,7 @@ export default function OntologyPage() {
             All mutations are auditable
           </span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
           {actionTypes.map((at) => (
             <div
               key={at.actionName}

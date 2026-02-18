@@ -222,7 +222,7 @@ function LabPageContent() {
 
   return (
     <PageShell title="Pricing Lab" subtitle="Strategic pricing, revenue streams & profitability simulation">
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, alignItems: 'start' }}>
         {/* ===== SIDEBAR CONTROLS ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Revenue Controls */}
@@ -450,7 +450,7 @@ function LabPageContent() {
           )}
 
           {/* KPI Row 1: Revenue */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
             <KPICard title="Subscription MRR" value={formatAED(projectedTotal)} accent={mrrDelta >= 0 ? '#00c853' : '#ff3d00'} subtitle={`${mrrDelta >= 0 ? '+' : ''}${formatAED(mrrDelta)} delta`} />
             <KPICard title="Line Item Revenue" value={formatAED(lineItemRevenue.totalMonthly)} accent="#a78bfa" subtitle={`${lineItemRevenue.breakdown.length} active streams`} />
             <KPICard title="Total Projected MRR" value={formatAED(totalProjectedMRR)} accent="#00c853" subtitle={`ARR ${formatAED(totalAnnual)}`} />
@@ -458,7 +458,7 @@ function LabPageContent() {
           </div>
 
           {/* KPI Row 2: Profitability */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
             <KPICard title="Net Contribution" value={formatAED(projectedNetContribution)} accent={projectedNetContribution >= 0 ? '#00c853' : '#ff3d00'} />
             <KPICard title="Margin %" value={`${projectedMarginPercent.toFixed(1)}%`} accent={projectedMarginPercent >= 50 ? '#00c853' : projectedMarginPercent >= 30 ? '#fbbf24' : '#ff6e40'} />
             <KPICard title="Revenue / Seat" value={formatAED(projectedRevenuePerSeat)} accent="#2979ff" />

@@ -169,7 +169,7 @@ export default function SalesGoalsPage() {
       subtitle={`Target: 50 clients by Dec 2026 | Monthly Target: +${monthlyAcquisitionTarget} new clients/month`}
     >
       {/* KPI Cards — Row 1: Client Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
         <KPICard title="Subscribers" value={currentSubscribers.toString()} subtitle="recurring clients" accent="#00c853" />
         <KPICard title="One-Time Clients" value={currentOneTimeClients.toString()} subtitle="project-based" accent="#fbbf24" />
         <KPICard title="Total Active" value={currentClients.toString()} accent="#2979ff" />
@@ -183,7 +183,7 @@ export default function SalesGoalsPage() {
       </div>
 
       {/* KPI Cards — Row 2: Revenue Breakdown & Costs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
         <KPICard title="Subscription MRR" value={formatAED(currentMRR)} accent="#00c853" />
         <KPICard title="One-Time Revenue" value={formatAED(totalOneTimeRevenue)} accent="#fbbf24" />
         <KPICard title="Projected MRR @50" value={formatAED(projectedMRR50)} accent="#60a5fa" />
@@ -198,7 +198,7 @@ export default function SalesGoalsPage() {
       </div>
 
       {/* Two-column: Revenue Projection Chart + Cost Breakdown Pie */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
         {/* Revenue Projection Chart */}
         <div style={{
           background: '#ffffff',

@@ -202,7 +202,7 @@ export default function DashboardPage() {
       subtitle="CEO/CFO financial overview"
     >
       {/* ===== KPI ROW 1: Revenue ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
         <KPICard
           title="Subscription MRR"
           value={formatAED(metrics.totalMRR)}
@@ -231,7 +231,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== KPI ROW 2: Clients ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KPICard
           title="Subscribers"
           value={formatNumber(metrics.activeSubscriberCount)}
@@ -259,7 +259,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== CHART ROW 1: Partner Donut + Revenue by Client ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 20, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20 }}>
         {/* Revenue by Partner */}
         <div style={cardStyle}>
           <h3 style={sectionTitle}>Revenue by Partner</h3>
@@ -311,7 +311,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ===== CHART ROW 2: Revenue Composition + Financial Summary ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 20, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20 }}>
         {/* Revenue Composition Donut */}
         <div style={chartCardStyle}>
           <div style={{
@@ -415,7 +415,7 @@ export default function DashboardPage() {
         {/* Financial Summary */}
         <div style={cardStyle}>
           <h3 style={sectionTitle}>Financial Summary</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
             <div style={{ padding: 16, background: '#f5f0e8', borderRadius: 10 }}>
               <p style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, marginBottom: 4 }}>Recurring Revenue</p>
               <p style={{ fontSize: 20, fontWeight: 700, color: '#00a844', fontFamily: "'Space Mono', monospace" }}>{formatAED(metrics.totalMRR)}</p>

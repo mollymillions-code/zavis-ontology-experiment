@@ -564,7 +564,7 @@ export default function EconomicsPage() {
       {perspective === 'seat' && (
         <>
           {/* ROW 1: The Unit Hero + Revenue ↔ Cost Streams */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 20, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20 }}>
             {/* THE UNIT CARD */}
             <div style={{
               background: 'linear-gradient(135deg, #0a2a1a 0%, #0d1a0d 40%, #1a2e1a 100%)',
@@ -651,7 +651,7 @@ export default function EconomicsPage() {
           </div>
 
           {/* ROW 2: Cost Waterfall + Scale Effect */}
-          <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20 }}>
             <div style={chartCardStyle}>
               <div style={dotGrid} />
               <h3 style={chartTitleStyle}>Per-Seat Cost Waterfall</h3>
@@ -790,7 +790,7 @@ export default function EconomicsPage() {
       {perspective === 'plan' && (
         <>
           {/* PLAN COMPARISON CARDS */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
             {planEcons.map((pe) => {
               const isSelected = pe.planId === selectedPlanId;
               const planColor = PLAN_CONFIGS.find(p => p.id === pe.planId)?.color ?? '#60a5fa';
@@ -865,7 +865,7 @@ export default function EconomicsPage() {
             const pMarginColor = selectedPlanEcon.marginPercent >= 60 ? '#00c853' : selectedPlanEcon.marginPercent >= 30 ? '#fbbf24' : '#ff3d00';
             const planMaxStream = selectedPlanEcon.totalRevenue;
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 20, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20 }}>
                 {/* PLAN ANATOMY CARD */}
                 <div style={{
                   background: `linear-gradient(135deg, #1a1a2e 0%, #131320 50%, #0d0d18 100%)`,
@@ -950,7 +950,7 @@ export default function EconomicsPage() {
           <p style={{ fontSize: 11, fontWeight: 700, color: '#1a1a1a', ...dm, textTransform: 'uppercase', letterSpacing: 0.5 }}>Assumptions</p>
           <span style={{ fontSize: 10, color: '#999', ...dm }}>Adjust to model what-if scenarios</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           <div>
             <p style={{ fontSize: 8, fontWeight: 700, color: '#ff6e40', ...dm, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Direct Costs</p>
             <div style={{ marginBottom: 8 }}>

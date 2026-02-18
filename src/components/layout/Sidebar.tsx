@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
+  X,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -45,11 +46,50 @@ const ANALYSIS_ITEMS = [
 
 const ANALYSIS_PATHS = ANALYSIS_ITEMS.map((i) => i.href);
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const isAnalysisActive = ANALYSIS_PATHS.includes(pathname);
   const [analysisOpen, setAnalysisOpen] = useState(isAnalysisActive);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    onClose();
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
+  // Close on Escape key
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [mobileOpen, handleKeyDown]);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -76,26 +116,48 @@ export default function Sidebar() {
     paddingLeft: 36,
   });
 
-  return (
+  const sidebarContent = (
     <aside
-      className="fixed left-0 top-0 h-screen w-56 flex flex-col z-40"
+      className={[
+        'fixed left-0 top-0 h-screen w-56 flex flex-col z-50',
+        // Mobile: slide in/out with transition
+        'transition-transform duration-300 ease-in-out',
+        'md:translate-x-0',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+      ].join(' ')}
       style={{ background: '#1a1a1a', color: '#999' }}
     >
       {/* Brand */}
       <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center gap-3">
-          <span
-            className="px-3 py-1.5 text-sm tracking-widest"
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span
+              className="px-3 py-1.5 text-sm tracking-widest"
+              style={{
+                background: '#00c853',
+                color: '#1a1a1a',
+                fontFamily: "'Space Mono', monospace",
+                fontWeight: 700,
+                letterSpacing: 2,
+              }}
+            >
+              ZAVIS
+            </span>
+          </div>
+          {/* Close button on mobile */}
+          <button
+            onClick={onClose}
+            className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg"
             style={{
-              background: '#00c853',
-              color: '#1a1a1a',
-              fontFamily: "'Space Mono', monospace",
-              fontWeight: 700,
-              letterSpacing: 2,
+              background: 'transparent',
+              border: 'none',
+              color: '#999',
+              cursor: 'pointer',
             }}
+            aria-label="Close menu"
           >
-            ZAVIS
-          </span>
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <p
           className="mt-2 text-xs"
@@ -187,5 +249,20 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Backdrop for mobile */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      {sidebarContent}
+    </>
   );
 }

@@ -7,21 +7,21 @@ interface PageShellProps {
 
 export default function PageShell({ title, subtitle, children, actions }: PageShellProps) {
   return (
-    <div className="ml-56 min-h-screen" style={{ background: '#f5f0e8' }}>
+    <div className="ml-0 md:ml-56 min-h-screen" style={{ background: '#f5f0e8' }}>
       <header
-        className="sticky top-0 z-30 px-8 py-5"
+        className="sticky top-0 z-30 px-4 py-4 md:px-8 md:py-5"
         style={{
           background: '#1a1a1a',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       >
         <div className="flex items-center justify-between">
-          <div>
+          <div className="pl-12 md:pl-0">
             <h1
+              className="text-base md:text-xl"
               style={{
                 fontFamily: "'DM Sans', sans-serif",
                 fontWeight: 700,
-                fontSize: 20,
                 color: '#ffffff',
               }}
             >
@@ -29,10 +29,9 @@ export default function PageShell({ title, subtitle, children, actions }: PageSh
             </h1>
             {subtitle && (
               <p
-                className="mt-1"
+                className="mt-1 text-xs md:text-sm"
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
                   color: '#999999',
                 }}
               >
@@ -40,10 +39,10 @@ export default function PageShell({ title, subtitle, children, actions }: PageSh
               </p>
             )}
           </div>
-          {actions && <div className="flex items-center gap-3">{actions}</div>}
+          {actions && <div className="flex items-center gap-2 md:gap-3">{actions}</div>}
         </div>
       </header>
-      <main className="px-8 py-6">{children}</main>
+      <main className="px-4 py-4 md:px-8 md:py-6">{children}</main>
     </div>
   );
 }

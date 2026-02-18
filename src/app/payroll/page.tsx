@@ -173,7 +173,7 @@ export default function PayrollPage() {
   return (
     <PageShell title="Payroll" subtitle="Employee compensation management">
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KPICard title="Total Monthly Payroll" value={formatAED(totalMonthly)} accent="#ff6e40" />
         <KPICard title="Headcount (Active)" value={String(headcount)} accent="#60a5fa" />
         <KPICard title="Avg Salary" value={formatAED(avgSalary)} accent="#fbbf24" />

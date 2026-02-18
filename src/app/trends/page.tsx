@@ -303,7 +303,7 @@ export default function TrendsPage() {
     >
       {/* ===== Revenue Breakdown ===== */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24,
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 24,
       }}>
         {/* Subscription Revenue */}
         <div style={{
@@ -325,7 +325,7 @@ export default function TrendsPage() {
               <p style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', fontFamily: "'Space Mono', monospace" }}>{formatAED(metrics.totalARR)}</p>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <div style={{ background: '#f8f6f1', borderRadius: 8, padding: '10px 12px' }}>
               <p style={{ fontSize: 10, color: '#999', fontFamily: "'DM Sans', sans-serif", textTransform: 'uppercase' }}>Subscribers</p>
               <p style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a', fontFamily: "'Space Mono', monospace" }}>
@@ -378,7 +378,7 @@ export default function TrendsPage() {
               </p>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <div style={{ background: '#f8f6f1', borderRadius: 8, padding: '10px 12px' }}>
               <p style={{ fontSize: 10, color: '#999', fontFamily: "'DM Sans', sans-serif", textTransform: 'uppercase' }}>One-Time Clients</p>
               <p style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a', fontFamily: "'Space Mono', monospace" }}>
@@ -411,7 +411,7 @@ export default function TrendsPage() {
       </div>
 
       {/* ===== Compact KPI row ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
         <KPICard
           title="Platform Cost / Seat"
           value={formatAED(DEFAULT_ASSUMPTIONS.platformLicensePerSeat)}
@@ -510,7 +510,7 @@ export default function TrendsPage() {
       </div>
 
       {/* ===== Row 2: Revenue by Partner + Plan Distribution ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 24 }}>
         <div style={chartCard}>
           <div style={dotGrid} />
           <h3 style={chartTitle}>MRR by Sales Partner</h3>
@@ -602,7 +602,7 @@ export default function TrendsPage() {
       </div>
 
       {/* ===== Row 3: Top Clients + Partner Revenue Over Time ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 24 }}>
         <div style={chartCard}>
           <div style={dotGrid} />
           <h3 style={chartTitle}>Top Clients by MRR</h3>
@@ -686,7 +686,7 @@ export default function TrendsPage() {
       </div>
 
       {/* ===== Row 4: Unit Economics Summary + Commission Table ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 24 }}>
         {/* Unit Economics */}
         <div style={chartCard}>
           <div style={dotGrid} />

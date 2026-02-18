@@ -134,7 +134,7 @@ export default function ClientsPage() {
       }
     >
       {/* Summary KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KPICard title="Subscribers" value={formatNumber(summary.subscribers)} subtitle={`${summary.activeSubscribers} active`} accent="#00c853" />
         <KPICard title="One-Time Clients" value={formatNumber(summary.oneTimeClients)} subtitle={`${summary.activeOneTimeClients} active`} accent="#fbbf24" />
         <KPICard title="Total Clients" value={formatNumber(clients.length)} subtitle={`${summary.activeClients} active`} accent="#2979ff" />
