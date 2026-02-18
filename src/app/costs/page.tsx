@@ -163,26 +163,26 @@ export default function CostsPage() {
         Object.keys(editedValues).concat(Object.keys(editedNotes))
       );
 
-      const updates = Array.from(changedKeys).map((key) => {
+      const updates = Array.from(changedKeys).flatMap((key) => {
         const dashIdx = key.lastIndexOf('-');
         const category = key.slice(0, dashIdx);
         const type = key.slice(dashIdx + 1) as 'actual' | 'projected';
         const existing = costMap[key];
-        const amount =
-          editedValues[key] !== undefined ? editedValues[key] : existing?.amount ?? 0;
+        const amountEdited = editedValues[key] !== undefined;
+        const amount = amountEdited ? editedValues[key] : existing?.amount ?? 0;
         const notes =
           editedNotes[key] !== undefined ? editedNotes[key] : existing?.notes ?? '';
 
         if (existing) {
           // Update existing entry
-          return fetch(`/api/costs/${existing.month}`, {
+          return [fetch(`/api/costs/${existing.month}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: existing.id, amount, notes }),
-          });
-        } else {
-          // Create new entry for this category/type in the selected month
-          return fetch('/api/costs', {
+          })];
+        } else if (amountEdited && amount > 0) {
+          // Only create a new DB entry if the user explicitly set an amount > 0
+          return [fetch('/api/costs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -194,8 +194,9 @@ export default function CostsPage() {
               notes,
               createdAt: new Date().toISOString(),
             }),
-          });
+          })];
         }
+        return [];
       });
 
       await Promise.all(updates);
@@ -808,8 +809,9 @@ export default function CostsPage() {
                     <textarea
                       value={actualNotes || projectedNotes}
                       onChange={(e) => {
-                        handleNotesEdit(cat, 'actual', e.target.value);
-                        handleNotesEdit(cat, 'projected', e.target.value);
+                        // Only update notes for types that already have a DB entry
+                        if (costMap[`${cat}-actual`]) handleNotesEdit(cat, 'actual', e.target.value);
+                        if (costMap[`${cat}-projected`]) handleNotesEdit(cat, 'projected', e.target.value);
                       }}
                       rows={2}
                       placeholder="Add particulars..."
