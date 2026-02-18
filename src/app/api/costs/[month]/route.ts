@@ -14,13 +14,12 @@ export async function PUT(req: Request) {
   const body: Partial<MonthlyCost> = await req.json();
 
   if (body.id) {
-    // Update specific cost entry by ID
-    await db.update(monthlyCosts)
-      .set({
-        amount: body.amount ? String(body.amount) : undefined,
-        notes: body.notes,
-      })
-      .where(eq(monthlyCosts.id, body.id));
+    const updateFields: Record<string, unknown> = {};
+    if (body.amount !== undefined) updateFields.amount = String(body.amount);
+    if (body.notes !== undefined) updateFields.notes = body.notes;
+    if (Object.keys(updateFields).length > 0) {
+      await db.update(monthlyCosts).set(updateFields).where(eq(monthlyCosts.id, body.id));
+    }
   }
 
   return NextResponse.json({ ok: true });
