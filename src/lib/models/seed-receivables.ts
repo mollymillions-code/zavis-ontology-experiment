@@ -16,6 +16,8 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-002', clientId: 'cli-002', month: '2025-11', amount: 500, description: 'One-time Setup', status: 'paid' },
 
   // ===== December 2025 =====
+  // Note: Modern Aesthetics Dec 2025 = 1 month subscription (1125) + partial setup (1000) = 2125
+  //       Remaining setup (3000 of 4000 total one-time) not yet scheduled per contract.
   { id: 'rcv-003', clientId: 'cli-001', month: '2025-12', amount: 15897, description: '50% Go Live Fee + Care Retainer + Booking Module + Stripe + EMR Integration + White Glove Onboarding + Managed Marketing Service', status: 'paid' },
   { id: 'rcv-004', clientId: 'cli-003', month: '2025-12', amount: 4750, description: 'Quarterly Subscription Fee + Stripe', status: 'paid' },
   { id: 'rcv-005', clientId: 'cli-006', month: '2025-12', amount: 2125, description: 'Monthly Subscription + One-time Setup', status: 'paid' },
@@ -39,6 +41,7 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-017', clientId: 'cli-008', month: '2026-03', amount: 675, description: 'Monthly Subscription 3 Seats', status: 'pending' },
   { id: 'rcv-018', clientId: 'cli-007', month: '2026-03', amount: 3375, description: 'Quarterly Subscription Fee', status: 'pending' },
   { id: 'rcv-019', clientId: 'cli-009', month: '2026-03', amount: 10735, description: 'ECLA Platform Services', status: 'pending' },
+  { id: 'rcv-055', clientId: 'cli-006', month: '2026-03', amount: 3375, description: 'Quarterly Subscription Fee (Pro Plan)', status: 'pending' },
 
   // ===== April 2026 =====
   { id: 'rcv-020', clientId: 'cli-001', month: '2026-04', amount: 2422, description: 'Quarterly Subscription Fee', status: 'pending' },
@@ -54,6 +57,7 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-026', clientId: 'cli-003', month: '2026-06', amount: 3750, description: 'Quarterly Subscription Fee', status: 'pending' },
   { id: 'rcv-027', clientId: 'cli-008', month: '2026-06', amount: 675, description: 'Monthly Subscription 3 Seats', status: 'pending' },
   { id: 'rcv-028', clientId: 'cli-007', month: '2026-06', amount: 3375, description: 'Quarterly Subscription Fee', status: 'pending' },
+  { id: 'rcv-056', clientId: 'cli-006', month: '2026-06', amount: 3375, description: 'Quarterly Subscription Fee (Pro Plan)', status: 'pending' },
 
   // ===== July 2026 =====
   { id: 'rcv-029', clientId: 'cli-001', month: '2026-07', amount: 2422, description: 'Quarterly Subscription Fee', status: 'pending' },
@@ -70,6 +74,7 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-036', clientId: 'cli-003', month: '2026-09', amount: 3750, description: 'Quarterly Subscription Fee', status: 'pending' },
   { id: 'rcv-037', clientId: 'cli-008', month: '2026-09', amount: 675, description: 'Monthly Subscription 3 Seats', status: 'pending' },
   { id: 'rcv-038', clientId: 'cli-007', month: '2026-09', amount: 3375, description: 'Quarterly Subscription Fee', status: 'pending' },
+  { id: 'rcv-057', clientId: 'cli-006', month: '2026-09', amount: 3375, description: 'Quarterly Subscription Fee (Pro Plan)', status: 'pending' },
 
   // ===== October 2026 =====
   { id: 'rcv-039', clientId: 'cli-001', month: '2026-10', amount: 2422, description: 'Quarterly Subscription Fee', status: 'pending' },
@@ -84,4 +89,5 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-044', clientId: 'cli-003', month: '2026-12', amount: 3750, description: 'Quarterly Subscription Fee', status: 'pending' },
   { id: 'rcv-045', clientId: 'cli-008', month: '2026-12', amount: 675, description: 'Monthly Subscription 3 Seats', status: 'pending' },
   { id: 'rcv-046', clientId: 'cli-007', month: '2026-12', amount: 3375, description: 'Quarterly Subscription Fee', status: 'pending' },
+  { id: 'rcv-058', clientId: 'cli-006', month: '2026-12', amount: 3375, description: 'Quarterly Subscription Fee (Pro Plan)', status: 'pending' },
 ];
