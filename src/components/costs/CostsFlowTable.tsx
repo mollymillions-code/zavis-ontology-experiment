@@ -20,9 +20,19 @@ const CATEGORY_COLORS: Record<string, string> = {
   commissions:    '#10b981',
   aws:            '#3b82f6',
   chatwoot_seats: '#a855f7',
-  chatwoot_sub:   '#ec4899',
+  chatwoot_sub:   '#a855f7',
 };
 const FALLBACK_COLORS = ['#ef4444', '#14b8a6', '#f97316', '#84cc16', '#06b6d4', '#d946ef'];
+
+// Background tints matching each category (low alpha)
+const CATEGORY_BG: Record<string, string> = {
+  payroll:        'rgba(99,102,241,0.10)',
+  sales_spend:    'rgba(245,158,11,0.10)',
+  commissions:    'rgba(16,185,129,0.10)',
+  aws:            'rgba(59,130,246,0.10)',
+  chatwoot_seats: 'rgba(168,85,247,0.10)',
+  chatwoot_sub:   'rgba(168,85,247,0.10)',
+};
 
 function getCategoryColor(cat: string, idx: number) {
   return CATEGORY_COLORS[cat] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
@@ -37,7 +47,6 @@ interface CostsFlowTableProps {
 }
 
 export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
-  // Always projected
   const { months, categories, pivot, categoryTotals, monthTotals, grandTotal, chartData } = useMemo(() => {
     const filtered = costs.filter((c) => c.type === 'projected');
 
@@ -49,7 +58,6 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
     let grandTotal = 0;
 
     for (const c of filtered) {
-      // Merge chatwoot_sub into chatwoot_seats — same cost, two DB categories
       const cat = c.category === 'chatwoot_sub' ? 'chatwoot_seats' : c.category;
       monthSet.add(c.month);
       categorySet.add(cat);
@@ -61,12 +69,10 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
     }
 
     const months = Array.from(monthSet).sort();
-    // Sort categories by total descending
     const categories = Array.from(categorySet).sort(
       (a, b) => (categoryTotals[b] || 0) - (categoryTotals[a] || 0)
     );
 
-    // Build stacked chart data — one entry per month, one key per category
     const chartData = months.map((m) => {
       const row: Record<string, string | number> = { month: formatMonth(m) };
       for (const cat of categories) {
@@ -86,6 +92,7 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
         border: '1px solid #e0dbd2',
         padding: 48,
         textAlign: 'center',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}>
         <p style={{ fontSize: 14, color: '#999', fontFamily: "'DM Sans', sans-serif" }}>
           No projected cost data found.
@@ -192,7 +199,7 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
         </ResponsiveContainer>
       </div>
 
-      {/* Pivot Table */}
+      {/* ── Pivot Table (mirrors ReceivablesTable design) ── */}
       <div style={{
         background: '#ffffff',
         borderRadius: 12,
@@ -200,7 +207,7 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         overflowX: 'auto',
       }}>
-        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: months.length * 90 + 200 }}>
+        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: months.length * 80 + 280 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
               <th style={{
@@ -223,7 +230,7 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
               </th>
               {months.map((m) => (
                 <th key={m} style={{
-                  padding: '10px 8px',
+                  padding: '10px 6px',
                   textAlign: 'right',
                   fontWeight: 600,
                   color: '#666',
@@ -231,7 +238,7 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
                   letterSpacing: 0.3,
                   fontFamily: "'Space Mono', monospace",
                   whiteSpace: 'nowrap',
-                  minWidth: 90,
+                  minWidth: 72,
                 }}>
                   {formatMonth(m)}
                 </th>
@@ -256,11 +263,10 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
           <tbody>
             {categories.map((cat, i) => {
               const color = getCategoryColor(cat, i);
+              const bg = CATEGORY_BG[cat] || `${color}12`;
+              const rowBg = i % 2 === 0 ? '#fafaf8' : '#ffffff';
               return (
-                <tr key={cat} style={{
-                  borderBottom: '1px solid #e0dbd2',
-                  background: i % 2 === 0 ? '#fafaf8' : '#ffffff',
-                }}>
+                <tr key={cat} style={{ borderBottom: '1px solid #e0dbd2', background: rowBg }}>
                   <td style={{
                     padding: '8px 12px',
                     fontWeight: 600,
@@ -270,28 +276,29 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
                     whiteSpace: 'nowrap',
                     position: 'sticky',
                     left: 0,
-                    background: i % 2 === 0 ? '#fafaf8' : '#ffffff',
+                    background: rowBg,
                     zIndex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
                   }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
                     {getCategoryLabel(cat)}
                   </td>
                   {months.map((m) => {
                     const amount = pivot[cat]?.[m];
+                    if (!amount) {
+                      return <td key={m} style={{ padding: '4px 6px' }} />;
+                    }
                     return (
                       <td key={m} style={{
-                        padding: '8px 8px',
+                        padding: '4px 6px',
                         textAlign: 'right',
                         fontFamily: "'Space Mono', monospace",
                         fontSize: 10,
-                        fontWeight: amount ? 600 : 400,
-                        color: amount ? color : '#ccc',
-                        background: amount ? `${color}0d` : undefined,
+                        fontWeight: 600,
+                        color,
+                        background: bg,
+                        borderLeft: `2px solid ${color}40`,
+                        borderRadius: 0,
                       }}>
-                        {amount ? formatAED(amount, 0) : '—'}
+                        {formatAED(amount, 0)}
                       </td>
                     );
                   })}
@@ -328,7 +335,7 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
               </td>
               {months.map((m) => (
                 <td key={m} style={{
-                  padding: '10px 8px',
+                  padding: '10px 6px',
                   textAlign: 'right',
                   fontFamily: "'Space Mono', monospace",
                   fontWeight: 700,
