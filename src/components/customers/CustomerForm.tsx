@@ -97,14 +97,14 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
 
   // Auto-compute MRR for per_seat plans
   const computedMRR = isPerSeat && perSeatCost && seatCount
-    ? Math.round(Number(perSeatCost) * Number(seatCount) * (1 - discount / 100))
+    ? Math.round(Number(perSeatCost) * Number(seatCount) * (1 - discount / 100) * 100) / 100
     : mrr;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const now = new Date().toISOString();
     const finalMRR = isPerSeat && perSeatCost && seatCount
-      ? Math.round(Number(perSeatCost) * Number(seatCount) * (1 - discount / 100))
+      ? Math.round(Number(perSeatCost) * Number(seatCount) * (1 - discount / 100) * 100) / 100
       : isOneTime ? 0 : mrr;
 
     const saved: Client = {
@@ -205,6 +205,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
                   style={monoInputStyle}
                   type="number"
                   min={0}
+                  step={0.01}
                   value={perSeatCost}
                   onChange={(e) => setPerSeatCost(e.target.value ? Number(e.target.value) : '')}
                 />
@@ -229,7 +230,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
               type="number"
               min={0}
               max={100}
-              step={0.5}
+              step={0.01}
               value={discount}
               onChange={(e) => setDiscount(Number(e.target.value) || 0)}
             />

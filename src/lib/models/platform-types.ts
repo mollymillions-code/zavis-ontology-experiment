@@ -102,10 +102,10 @@ export type CostType = 'actual' | 'projected';
 
 export const COST_CATEGORY_LABELS: Record<CostCategory, string> = {
   aws: 'AWS Costs',
-  chatwoot_seats: 'Chatwoot',
+  chatwoot_seats: 'Chatwoot Per-Seat',
   payroll: 'Payroll',
   sales_spend: 'Sales Spend',
-  chatwoot_sub: 'Chatwoot',
+  chatwoot_sub: 'Chatwoot Subscription',
   commissions: 'Monthly Commissions',
 };
 

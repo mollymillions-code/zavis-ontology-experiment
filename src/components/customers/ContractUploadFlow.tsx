@@ -112,15 +112,21 @@ export default function ContractUploadFlow({
         body: formData,
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned invalid response: ${text.slice(0, 200)}`);
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || 'Extraction failed');
+        throw new Error((data.error as string) || 'Extraction failed');
       }
 
       const ext = data.extraction as ContractExtraction;
       setExtraction(ext);
-      setUsage(data.usage);
+      setUsage(data.usage as { inputTokens: number; outputTokens: number; estimatedCostUSD: number });
 
       // Populate editable fields
       setEditName(ext.customer.name);

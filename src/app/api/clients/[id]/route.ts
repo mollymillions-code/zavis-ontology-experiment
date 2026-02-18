@@ -23,6 +23,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.pricingModel !== undefined) updateFields.pricingModel = values.pricingModel;
   if (body.perSeatCost !== undefined) updateFields.perSeatCost = values.perSeatCost;
   if (body.seatCount !== undefined) updateFields.seatCount = values.seatCount;
+  if (body.billingCycle !== undefined) updateFields.billingCycle = values.billingCycle;
+  if (body.plan !== undefined) updateFields.plan = values.plan;
+  if (body.discount !== undefined) updateFields.discount = values.discount;
   if (body.mrr !== undefined) updateFields.mrr = values.mrr;
   if (body.oneTimeRevenue !== undefined) updateFields.oneTimeRevenue = values.oneTimeRevenue;
   if (body.annualRunRate !== undefined) updateFields.annualRunRate = values.annualRunRate;
@@ -31,6 +34,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.email !== undefined) updateFields.email = values.email;
   if (body.phone !== undefined) updateFields.phone = values.phone;
   if (body.companyLegalName !== undefined) updateFields.companyLegalName = values.companyLegalName;
+  if (body.trn !== undefined) updateFields.trn = values.trn;
   if (body.billingAddress !== undefined) updateFields.billingAddress = values.billingAddress;
   if (body.defaultTerms !== undefined) updateFields.defaultTerms = values.defaultTerms;
 
