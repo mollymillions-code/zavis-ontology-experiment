@@ -22,6 +22,7 @@ export const SEED_RECEIVABLES: ReceivableEntry[] = [
   { id: 'rcv-004', clientId: 'cli-003', month: '2025-12', amount: 4750, description: 'Quarterly Subscription Fee + Stripe', status: 'paid' },
   { id: 'rcv-005', clientId: 'cli-006', month: '2025-12', amount: 2125, description: 'Monthly Subscription + One-time Setup', status: 'paid' },
   { id: 'rcv-006', clientId: 'cli-010', month: '2025-12', amount: 2225, description: 'One-time Setup & Training Fee', status: 'paid' },
+  { id: 'rcv-059', clientId: 'cli-009', month: '2025-12', amount: 10000, description: 'ECLA Platform Services (One-Time)', status: 'paid' },
   { id: 'rcv-007', clientId: 'cli-007', month: '2025-12', amount: 7475, description: 'Quarterly Subscription Fee + EMR Integrations', status: 'paid' },
 
   // ===== January 2026 =====

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -17,6 +18,9 @@ import {
   FileText,
   CreditCard,
   LogOut,
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -29,6 +33,9 @@ const NAV_ITEMS = [
   { href: '/payments', label: 'Payments', icon: CreditCard },
   { href: '/goals', label: 'Sales Goals', icon: Target },
   { href: '/partners', label: 'Partners', icon: Handshake },
+];
+
+const ANALYSIS_ITEMS = [
   { href: '/trends', label: 'Trends', icon: TrendingUp },
   { href: '/economics', label: 'Unit Economics', icon: DollarSign },
   { href: '/projections', label: 'Projections', icon: LineChart },
@@ -36,15 +43,38 @@ const NAV_ITEMS = [
   { href: '/ontology', label: 'Ontology', icon: Network },
 ];
 
+const ANALYSIS_PATHS = ANALYSIS_ITEMS.map((i) => i.href);
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const isAnalysisActive = ANALYSIS_PATHS.includes(pathname);
+  const [analysisOpen, setAnalysisOpen] = useState(isAnalysisActive);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
     router.refresh();
   }
+
+  const linkStyle = (isActive: boolean) => ({
+    fontFamily: "'DM Sans', sans-serif",
+    fontWeight: isActive ? 700 : 500,
+    fontSize: 13,
+    color: isActive ? '#ffffff' : '#999999',
+    background: isActive ? 'rgba(0, 200, 83, 0.12)' : 'transparent',
+    borderLeft: isActive ? '3px solid #00c853' : '3px solid transparent',
+  });
+
+  const subLinkStyle = (isActive: boolean) => ({
+    fontFamily: "'DM Sans', sans-serif",
+    fontWeight: isActive ? 700 : 500,
+    fontSize: 12,
+    color: isActive ? '#ffffff' : '#888888',
+    background: isActive ? 'rgba(0, 200, 83, 0.12)' : 'transparent',
+    borderLeft: isActive ? '3px solid #00c853' : '3px solid transparent',
+    paddingLeft: 36,
+  });
 
   return (
     <aside
@@ -84,20 +114,55 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontWeight: isActive ? 700 : 500,
-                fontSize: 13,
-                color: isActive ? '#ffffff' : '#999999',
-                background: isActive ? 'rgba(0, 200, 83, 0.12)' : 'transparent',
-                borderLeft: isActive ? '3px solid #00c853' : '3px solid transparent',
-              }}
+              style={linkStyle(isActive)}
             >
               <item.icon className="w-4 h-4 shrink-0" style={{ color: isActive ? '#00c853' : '#666' }} />
               {item.label}
             </Link>
           );
         })}
+
+        {/* Analysis group */}
+        <button
+          onClick={() => setAnalysisOpen(!analysisOpen)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full transition-colors"
+          style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontWeight: isAnalysisActive ? 700 : 500,
+            fontSize: 13,
+            color: isAnalysisActive ? '#ffffff' : '#999999',
+            background: 'transparent',
+            border: 'none',
+            borderLeft: isAnalysisActive ? '3px solid #00c853' : '3px solid transparent',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <BarChart3 className="w-4 h-4 shrink-0" style={{ color: isAnalysisActive ? '#00c853' : '#666' }} />
+          <span style={{ flex: 1 }}>Analysis</span>
+          {analysisOpen
+            ? <ChevronDown className="w-3.5 h-3.5 shrink-0" style={{ color: '#666' }} />
+            : <ChevronRight className="w-3.5 h-3.5 shrink-0" style={{ color: '#666' }} />
+          }
+        </button>
+        {analysisOpen && (
+          <div className="space-y-0.5">
+            {ANALYSIS_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 py-2 rounded-lg text-sm transition-colors"
+                  style={subLinkStyle(isActive)}
+                >
+                  <item.icon className="w-3.5 h-3.5 shrink-0" style={{ color: isActive ? '#00c853' : '#555' }} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       {/* Footer */}
