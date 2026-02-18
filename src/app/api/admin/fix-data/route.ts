@@ -14,7 +14,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { eq, and, gte, sql } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { db } from '@/db';
 import { receivables, clients } from '@/db/schema';
 
