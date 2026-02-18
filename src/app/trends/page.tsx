@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
@@ -80,6 +80,9 @@ export default function TrendsPage() {
   const captureSnapshotAction = useSnapshotStore((s) => s.captureSnapshot);
   const getPreviousSnapshot = useSnapshotStore((s) => s.getPreviousSnapshot);
   const deleteSnapshot = useSnapshotStore((s) => s.deleteSnapshot);
+  const hydrateSnapshots = useSnapshotStore((s) => s.hydrateFromDb);
+
+  useEffect(() => { hydrateSnapshots(); }, [hydrateSnapshots]);
   const getAllPartners = usePartnerStore((s) => s.getAllPartners);
 
   const currentMonth = new Date().toISOString().slice(0, 7);

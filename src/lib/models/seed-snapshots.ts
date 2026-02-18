@@ -81,14 +81,14 @@ export const SEED_SNAPSHOTS: MonthlySnapshot[] = [
     clientSnapshots: [
       { clientId: 'cli-001', name: 'Dental Nation General Clinic LLC SOC', salesPartner: 'Dr. Faisal', status: 'active', mrr: 2606 },
       { clientId: 'cli-003', name: 'FLOW WELLNESS POLYNESS CLINIC', salesPartner: 'Dr. Faisal', status: 'active', mrr: 1250 },
-      { clientId: 'cli-007', name: 'Modern Asthetics', salesPartner: 'Dr. Faisal', status: 'active', mrr: 1158.3 },
-      { clientId: 'cli-010', name: 'Dr. Nadz', salesPartner: 'Dr. Faisal', status: 'active', mrr: 1125 },
+      { clientId: 'cli-006', name: 'Modern Aesthetics', salesPartner: 'Dr. Faisal', status: 'active', mrr: 1158.3 },  // was cli-007 pre-reshuffle
+      { clientId: 'cli-008', name: 'Dr. Nadz', salesPartner: 'Dr. Faisal', status: 'active', mrr: 1125 },             // was cli-010 pre-reshuffle
       { clientId: 'cli-004', name: 'Etisalat Assist', salesPartner: 'Thousif', status: 'active', mrr: 600 },
-      { clientId: 'cli-006', name: 'GS Polyclinic', salesPartner: 'Thousif', status: 'active', mrr: 1125 },
-      { clientId: 'cli-015', name: 'AIMS', salesPartner: 'Thousif', status: 'active', mrr: 1349 },
-      { clientId: 'cli-008', name: 'First City', salesPartner: 'Thousif', status: 'active', mrr: 498 },
-      { clientId: 'cli-009', name: 'My London Skin Clinic', salesPartner: 'Sagar', status: 'active', mrr: 1992 },
-      { clientId: 'cli-016', name: 'Kent HealthCare', salesPartner: null, status: 'active', mrr: 499 },
+      { clientId: 'cli-H06', name: 'GS Polyclinic', salesPartner: 'Thousif', status: 'active', mrr: 1125 },           // historical only, no longer active
+      { clientId: 'cli-015', name: 'AIMS', salesPartner: 'Thousif', status: 'active', mrr: 1349 },                    // historical only
+      { clientId: 'cli-H08', name: 'First City', salesPartner: 'Thousif', status: 'active', mrr: 498 },               // historical only, no longer active
+      { clientId: 'cli-007', name: 'My London Skin Clinic', salesPartner: 'Sagar', status: 'active', mrr: 1992 },     // was cli-009 pre-reshuffle
+      { clientId: 'cli-013', name: 'Kent HealthCare', salesPartner: null, status: 'active', mrr: 499 },               // was cli-016 pre-reshuffle
       { clientId: 'cli-017', name: 'Fathi Omara', salesPartner: null, status: 'active', mrr: 1499 },
     ],
   },
