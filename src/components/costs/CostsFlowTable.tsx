@@ -49,11 +49,13 @@ export default function CostsFlowTable({ costs }: CostsFlowTableProps) {
     let grandTotal = 0;
 
     for (const c of filtered) {
+      // Merge chatwoot_sub into chatwoot_seats — same cost, two DB categories
+      const cat = c.category === 'chatwoot_sub' ? 'chatwoot_seats' : c.category;
       monthSet.add(c.month);
-      categorySet.add(c.category);
-      if (!pivot[c.category]) pivot[c.category] = {};
-      pivot[c.category][c.month] = (pivot[c.category][c.month] || 0) + c.amount;
-      categoryTotals[c.category] = (categoryTotals[c.category] || 0) + c.amount;
+      categorySet.add(cat);
+      if (!pivot[cat]) pivot[cat] = {};
+      pivot[cat][c.month] = (pivot[cat][c.month] || 0) + c.amount;
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + c.amount;
       monthTotals[c.month] = (monthTotals[c.month] || 0) + c.amount;
       grandTotal += c.amount;
     }
