@@ -5,9 +5,8 @@ import { db } from '@/db';
 import { invoices, clients } from '@/db/schema';
 import { dbRowToInvoice } from '@/db/mappers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 export async function POST(req: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const { invoiceId } = await req.json() as { invoiceId: string };
 
   if (!invoiceId) {
