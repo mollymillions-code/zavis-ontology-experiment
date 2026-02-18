@@ -59,7 +59,6 @@ export default function CostsPage() {
     notes: '',
   });
   const [addingCost, setAddingCost] = useState(false);
-  const [flowView, setFlowView] = useState<'actual' | 'projected'>('actual');
 
   useEffect(() => {
     fetch('/api/costs')
@@ -960,42 +959,16 @@ export default function CostsPage() {
 
       {/* ===== MONTHLY COST FLOW SECTION ===== */}
       <div style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: 18,
-            fontWeight: 700,
-            color: '#1a1a1a',
-            fontFamily: "'DM Sans', sans-serif",
-          }}>
-            Monthly Cost Flow
-          </h2>
-          {/* Actual / Projected toggle */}
-          <div style={{ display: 'flex', gap: 4, background: '#f0ebe0', borderRadius: 10, padding: 4 }}>
-            {(['actual', 'projected'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setFlowView(v)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: flowView === v ? '#ffffff' : 'transparent',
-                  color: flowView === v ? '#1a1a1a' : '#666',
-                  fontWeight: flowView === v ? 700 : 500,
-                  fontSize: 12,
-                  fontFamily: "'DM Sans', sans-serif",
-                  cursor: 'pointer',
-                  boxShadow: flowView === v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {v === 'actual' ? 'Actual' : 'Projected'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <CostsFlowTable costs={costs} viewType={flowView} />
+        <h2 style={{
+          margin: '0 0 16px 0',
+          fontSize: 18,
+          fontWeight: 700,
+          color: '#1a1a1a',
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          Monthly Cost Flow
+        </h2>
+        <CostsFlowTable costs={costs} />
       </div>
     </PageShell>
   );
