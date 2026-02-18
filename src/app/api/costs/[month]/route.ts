@@ -24,3 +24,11 @@ export async function PUT(req: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(req: Request) {
+  const { id } = await req.json();
+  if (id) {
+    await db.delete(monthlyCosts).where(eq(monthlyCosts.id, id));
+  }
+  return NextResponse.json({ ok: true });
+}

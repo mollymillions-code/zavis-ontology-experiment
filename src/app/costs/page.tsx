@@ -5,7 +5,7 @@ import PageShell from '@/components/layout/PageShell';
 import KPICard from '@/components/cards/KPICard';
 import CostsFlowTable from '@/components/costs/CostsFlowTable';
 import { formatAED } from '@/lib/utils/currency';
-import { Save, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, Plus, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import type { MonthlyCost, CostCategory } from '@/lib/models/platform-types';
 import { COST_CATEGORY_LABELS } from '@/lib/models/platform-types';
 import { useClientStore } from '@/lib/store/customer-store';
@@ -236,6 +236,24 @@ export default function CostsPage() {
     } finally {
       setAddingCost(false);
     }
+  }
+
+  async function handleDeleteCategory(category: string) {
+    // Delete all cost entries for this category in the selected month
+    const toDelete = monthCosts.filter((c) => c.category === category);
+    if (toDelete.length === 0) return;
+    await Promise.all(
+      toDelete.map((c) =>
+        fetch(`/api/costs/${c.month}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: c.id }),
+        })
+      )
+    );
+    const res = await fetch('/api/costs');
+    const data = await res.json();
+    setCosts(data);
   }
 
   const currentMonthIdx = allMonths.indexOf(selectedMonth);
@@ -494,6 +512,7 @@ export default function CostsPage() {
               >
                 Annual
               </th>
+              <th style={{ width: 40 }} />
             </tr>
           </thead>
           <tbody>
@@ -571,6 +590,20 @@ export default function CostsPage() {
                   >
                     {formatAED(annual)}
                   </td>
+                  <td style={{ padding: '12px 4px', textAlign: 'center', verticalAlign: 'top', paddingTop: 14 }}>
+                    <button
+                      onClick={() => handleDeleteCategory(cat)}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.15)', padding: 4,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#ff6e40'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.15)'; }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -630,12 +663,13 @@ export default function CostsPage() {
               >
                 {formatAED(totalActual * 12)}
               </td>
+              <td />
             </tr>
 
             {/* ── Inline Add Row ── */}
             {!showAddForm ? (
               <tr>
-                <td colSpan={5} style={{ padding: '12px 8px' }}>
+                <td colSpan={6} style={{ padding: '12px 8px' }}>
                   <button
                     onClick={() => setShowAddForm(true)}
                     style={{
