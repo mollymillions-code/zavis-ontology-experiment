@@ -9,6 +9,7 @@ import type { ContractExtraction } from '@/lib/schemas/contract-extraction';
 import ClientForm from './CustomerForm';
 import ContractUploadFlow from './ContractUploadFlow';
 import ContractUpdateFlow from './ContractUpdateFlow';
+import ChatUpdateFlow from './ChatUpdateFlow';
 import DocumentsFolder from '@/components/shared/DocumentsFolder';
 import { useWhatIfStore } from '@/lib/store/whatif-store';
 import { useRouter } from 'next/navigation';
@@ -216,6 +217,26 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
                     Documents
                   </Tabs.Trigger>
                 )}
+                {isEdit && (
+                  <Tabs.Trigger
+                    value="chat"
+                    style={{
+                      flex: 1,
+                      padding: '10px 16px',
+                      border: 'none',
+                      borderLeft: '1px solid #e0dbd2',
+                      background: activeTab === 'chat' ? '#1a1a1a' : '#ffffff',
+                      color: activeTab === 'chat' ? '#ffffff' : '#666',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif",
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    AI Update
+                  </Tabs.Trigger>
+                )}
               </Tabs.List>
 
               <Tabs.Content value="manual">
@@ -257,6 +278,18 @@ export default function ClientDetailPanel({ client, open, onClose, onSave }: Cli
                     entityType="client"
                     entityId={client.id}
                     entityName={client.name}
+                  />
+                </Tabs.Content>
+              )}
+
+              {isEdit && client && (
+                <Tabs.Content value="chat">
+                  <ChatUpdateFlow
+                    client={client}
+                    onApplyUpdates={(updates) => {
+                      const updated = { ...client, ...updates, updatedAt: new Date().toISOString() };
+                      onSave(updated);
+                    }}
                   />
                 </Tabs.Content>
               )}
