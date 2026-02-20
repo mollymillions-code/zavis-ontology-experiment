@@ -66,7 +66,8 @@ export const useClientStore = create<ClientState>()(
         const billingChanged =
           (updates.mrr !== undefined && updates.mrr !== oldClient?.mrr) ||
           (updates.billingCycle !== undefined && updates.billingCycle !== oldClient?.billingCycle) ||
-          (updates.oneTimeRevenue !== undefined && updates.oneTimeRevenue !== oldClient?.oneTimeRevenue);
+          (updates.oneTimeRevenue !== undefined && updates.oneTimeRevenue !== oldClient?.oneTimeRevenue) ||
+          (updates.billingPhases !== undefined);
 
         // Also trigger if client has zero receivables (e.g. created before auto-gen was deployed)
         const hasNoReceivables = get().receivables.filter((r) => r.clientId === id).length === 0;

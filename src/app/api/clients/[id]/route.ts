@@ -42,6 +42,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (body.companyLegalName !== undefined) updateFields.companyLegalName = values.companyLegalName;
     if (body.trn !== undefined) updateFields.trn = values.trn;
     if (body.billingAddress !== undefined) updateFields.billingAddress = values.billingAddress;
+    if (body.billingPhases !== undefined) updateFields.billingPhases = values.billingPhases;
     if (body.defaultTerms !== undefined) updateFields.defaultTerms = values.defaultTerms;
 
     await db.update(clients).set(updateFields).where(eq(clients.id, params.id));

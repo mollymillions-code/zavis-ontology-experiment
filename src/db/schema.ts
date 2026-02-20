@@ -23,6 +23,7 @@ export const clients = pgTable('clients', {
   companyLegalName: text('company_legal_name'),
   trn: text('trn'), // Tax Registration Number (UAE TRN)
   billingAddress: jsonb('billing_address'), // { attention, street1, street2, city, state, country, zip }
+  billingPhases: jsonb('billing_phases'), // BillingPhase[] — phased billing schedules
   defaultTerms: text('default_terms'), // PaymentTerms for this client
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -220,6 +221,22 @@ export const sequences = pgTable('sequences', {
 // ═══════════════════════════════════════════════════════════
 // PAYROLL
 // ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// SALES GOALS
+// ═══════════════════════════════════════════════════════════
+
+export const salesGoals = pgTable('sales_goals', {
+  id: text('id').primaryKey().default('active'),
+  targetClients: integer('target_clients').notNull().default(50),
+  targetYear: integer('target_year').notNull().default(2026),
+  startMonth: text('start_month').notNull().default('2026-02'),
+  endMonth: text('end_month').notNull().default('2026-12'),
+  monthlyOverrides: jsonb('monthly_overrides').default({}),
+  notes: text('notes'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: text('updated_by'),
+});
 
 export const payrollEntries = pgTable('payroll_entries', {
   id: text('id').primaryKey(),

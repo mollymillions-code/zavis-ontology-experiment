@@ -53,6 +53,13 @@ export interface BillingAddress {
   zip?: string | null;
 }
 
+export interface BillingPhase {
+  cycle: 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Annual' | 'One Time';
+  durationMonths: number; // 0 = indefinite / remainder
+  amount: number; // AED per cycle
+  note?: string | null;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -75,6 +82,7 @@ export interface Client {
   companyLegalName?: string | null;
   trn?: string | null; // Tax Registration Number (UAE TRN)
   billingAddress?: BillingAddress | null;
+  billingPhases?: BillingPhase[] | null;
   defaultTerms?: string | null;
   createdAt: string;
   updatedAt: string;

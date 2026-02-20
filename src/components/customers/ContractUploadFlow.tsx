@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 import type { ContractExtraction, ExtractedRevenueStream } from '@/lib/schemas/contract-extraction';
-import type { Client } from '@/lib/models/platform-types';
+import type { Client, BillingPhase } from '@/lib/models/platform-types';
+import { generateContractSummary } from '@/lib/utils/contract-summary';
 import { ZAVIS_PLANS } from '@/lib/models/platform-types';
 import { formatAED } from '@/lib/utils/currency';
 import DealAnalysisCard from './DealAnalysisCard';
@@ -152,6 +153,16 @@ export default function ContractUploadFlow({
       ? ZAVIS_PLANS.find((p) => p.pricingModel === 'per_seat' && p.suggestedPerSeat && Math.abs(p.suggestedPerSeat - (editPerSeat || 0)) < 30)?.name || 'Custom'
       : pm === 'one_time_only' ? 'One-Time Only' : 'Custom';
 
+    // Map billing phases from extraction if present
+    const billingPhases: BillingPhase[] | null = extraction?.customer?.billingPhases
+      ? extraction.customer.billingPhases.map((p) => ({
+          cycle: p.cycle,
+          durationMonths: p.durationMonths,
+          amount: p.amount,
+          note: p.note ?? null,
+        }))
+      : null;
+
     return {
       id: `cli-${Date.now()}`,
       name: editName,
@@ -173,6 +184,7 @@ export default function ContractUploadFlow({
       companyLegalName: extraction?.customer?.companyLegalName || null,
       trn: extraction?.customer?.trn || null,
       billingAddress: extraction?.customer?.billingAddress || null,
+      billingPhases,
       createdAt: now,
       updatedAt: now,
     };
@@ -195,6 +207,31 @@ export default function ContractUploadFlow({
         await fetch('/api/documents', { method: 'POST', body: formData });
       } catch (err) {
         console.error('Failed to upload document to S3:', err);
+      }
+    }
+
+    // Generate MD summary and create contract record with it stored in terms
+    if (extraction) {
+      try {
+        const summary = generateContractSummary(extraction);
+        const contractRecord = {
+          id: `con-${Date.now()}`,
+          customerId: client.id,
+          startDate: extraction.contract.startDate,
+          endDate: extraction.contract.endDate || null,
+          billingCycle: extraction.customer.billingCycle,
+          plan: extraction.customer.plan || null,
+          terms: { summary },
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        };
+        await fetch('/api/contracts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contractRecord),
+        });
+      } catch (err) {
+        console.error('Failed to create contract record:', err);
       }
     }
 

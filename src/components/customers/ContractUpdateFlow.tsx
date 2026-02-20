@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 import type { ContractExtraction } from '@/lib/schemas/contract-extraction';
-import type { Client } from '@/lib/models/platform-types';
+import type { Client, Contract } from '@/lib/models/platform-types';
+import { generateContractSummary } from '@/lib/utils/contract-summary';
 import { ZAVIS_PLANS } from '@/lib/models/platform-types';
 import { formatAED } from '@/lib/utils/currency';
 import DealAnalysisCard from './DealAnalysisCard';
@@ -65,10 +66,33 @@ export default function ContractUpdateFlow({
       const formData = new FormData();
       formData.append('contract', file);
 
+      // Fetch existing contract summary to enable smart (delta) extraction
+      try {
+        const contractsRes = await fetch('/api/contracts');
+        if (contractsRes.ok) {
+          const allContracts: Contract[] = await contractsRes.json();
+          const existing = allContracts.find((c) => c.customerId === client.id && c.status === 'active');
+          if (existing?.terms && typeof existing.terms === 'object' && 'summary' in existing.terms) {
+            formData.append('existingSummary', (existing.terms as { summary: string }).summary);
+          }
+        }
+      } catch {
+        // Proceed without existing summary — falls back to full extraction
+      }
+
       const res = await fetch('/api/extract-contract', {
         method: 'POST',
         body: formData,
       });
+
+      // Guard against non-JSON responses (e.g. Vercel timeout HTML pages, auth redirects)
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        if (res.status === 504 || res.status === 408) {
+          throw new Error('Extraction timed out — the PDF may be too large. Please try again.');
+        }
+        throw new Error(`Server returned an unexpected response (${res.status}). Please try again.`);
+      }
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Extraction failed');
@@ -130,7 +154,62 @@ export default function ContractUpdateFlow({
     setSaving(true);
     try {
       await uploadToS3();
+
+      // Regenerate MD summary and update/create contract record
+      if (extraction) {
+        try {
+          const summary = generateContractSummary(extraction);
+          // Fetch existing contracts for this customer
+          const contractsRes = await fetch('/api/contracts');
+          const allContracts: Contract[] = contractsRes.ok ? await contractsRes.json() : [];
+          const existing = allContracts.find((c) => c.customerId === client.id && c.status === 'active');
+
+          if (existing) {
+            // Update existing contract's terms with new summary
+            await fetch(`/api/contracts/${existing.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                terms: { summary },
+                billingCycle: extraction.customer.billingCycle,
+                plan: extraction.customer.plan || null,
+                startDate: extraction.contract.startDate,
+                endDate: extraction.contract.endDate || null,
+              }),
+            });
+          } else {
+            // Create new contract record
+            await fetch('/api/contracts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: `con-${Date.now()}`,
+                customerId: client.id,
+                startDate: extraction.contract.startDate,
+                endDate: extraction.contract.endDate || null,
+                billingCycle: extraction.customer.billingCycle,
+                plan: extraction.customer.plan || null,
+                terms: { summary },
+                status: 'active',
+                createdAt: new Date().toISOString(),
+              }),
+            });
+          }
+        } catch (err) {
+          console.error('Failed to update contract record:', err);
+        }
+      }
+
       const updated = buildUpdatedClient();
+      // Include billing phases from extraction
+      if (extraction?.customer?.billingPhases) {
+        updated.billingPhases = extraction.customer.billingPhases.map((p) => ({
+          cycle: p.cycle,
+          durationMonths: p.durationMonths,
+          amount: p.amount,
+          note: p.note ?? null,
+        }));
+      }
       onUpdateClient(updated);
     } catch (err) {
       console.error('Failed:', err);
@@ -155,11 +234,48 @@ export default function ContractUpdateFlow({
     }
   }
 
+  function formatPhases(phases: { cycle: string; durationMonths: number; amount: number; note?: string | null }[] | null | undefined): string {
+    if (!phases || phases.length === 0) return '—';
+    return phases.map((p) => {
+      const dur = p.durationMonths > 0 ? `${p.durationMonths}mo` : 'then';
+      return `${p.cycle} ${dur} @ ${formatAED(p.amount)}`;
+    }).join(' → ');
+  }
+
+  function phasesChanged(): boolean {
+    const currentPhases = client.billingPhases;
+    const extPhases = extraction?.customer?.billingPhases;
+    // No phases on either side → no change
+    if (!currentPhases?.length && !extPhases?.length) return false;
+    // One side has phases, other doesn't → changed
+    if (!currentPhases?.length || !extPhases?.length) return true;
+    // Both have phases — compare
+    if (currentPhases.length !== extPhases.length) return true;
+    return currentPhases.some((p, i) => {
+      const e = extPhases[i];
+      return p.cycle !== e.cycle || p.durationMonths !== e.durationMonths || p.amount !== e.amount;
+    });
+  }
+
   function getComparison(): ComparisonField[] {
     if (!extraction?.customer) return [];
     const ext = extraction.customer;
     const fmt = (v: string | number | null | undefined) => v == null ? '—' : String(v);
     const fmtAED = (v: number | null | undefined) => v == null ? '—' : formatAED(v);
+
+    // Determine effective billing display: if phases exist, show the phase summary instead of the flat cycle
+    const hasExtPhases = ext.billingPhases && ext.billingPhases.length > 0;
+    const hasCurrentPhases = client.billingPhases && client.billingPhases.length > 0;
+    const billingChanged = hasExtPhases || hasCurrentPhases
+      ? phasesChanged()
+      : client.billingCycle !== ext.billingCycle;
+
+    const currentBillingDisplay = hasCurrentPhases
+      ? formatPhases(client.billingPhases)
+      : fmt(client.billingCycle);
+    const extractedBillingDisplay = hasExtPhases
+      ? formatPhases(ext.billingPhases)
+      : fmt(ext.billingCycle);
 
     const fields: ComparisonField[] = [
       { label: 'Client Name', current: client.name, extracted: ext.name, changed: client.name !== ext.name },
@@ -167,7 +283,7 @@ export default function ContractUpdateFlow({
       { label: 'Seat Count', current: fmt(client.seatCount), extracted: fmt(ext.seatCount), changed: client.seatCount !== ext.seatCount },
       { label: 'MRR (AED)', current: fmtAED(client.mrr), extracted: fmtAED(ext.mrr), changed: client.mrr !== ext.mrr },
       { label: 'One-Time Revenue', current: fmtAED(client.oneTimeRevenue), extracted: fmtAED(ext.oneTimeRevenue), changed: client.oneTimeRevenue !== ext.oneTimeRevenue },
-      { label: 'Billing Cycle', current: fmt(client.billingCycle), extracted: fmt(ext.billingCycle), changed: client.billingCycle !== ext.billingCycle },
+      { label: 'Billing Schedule', current: currentBillingDisplay, extracted: extractedBillingDisplay, changed: billingChanged },
       { label: 'Discount', current: `${client.discount || 0}%`, extracted: `${ext.discount || 0}%`, changed: (client.discount || 0) !== (ext.discount || 0) },
       { label: 'Pricing Model', current: fmt(client.pricingModel), extracted: fmt(ext.pricingModel), changed: client.pricingModel !== ext.pricingModel },
       { label: 'Email', current: fmt(client.email), extracted: fmt(ext.email), changed: (client.email || '') !== (ext.email || '') },

@@ -4,6 +4,13 @@ import { z } from 'zod';
 // Defines the structured output the LLM must produce from a contract PDF.
 // Maps directly to ontology types: Customer, Contract, RevenueStream, Partner.
 
+export const BillingPhaseSchema = z.object({
+  cycle: z.enum(['Monthly', 'Quarterly', 'Half Yearly', 'Annual', 'One Time']),
+  durationMonths: z.number().describe('How many months this phase lasts (0 = indefinite / remainder of contract)'),
+  amount: z.number().describe('AED amount billed each cycle during this phase'),
+  note: z.string().nullable().describe('Optional context, e.g. "introductory rate" or "post-discount"'),
+});
+
 export const ExtractedCustomerSchema = z.object({
   name: z.string().describe('Customer/client organization name'),
   contactPerson: z.string().nullable().describe('Primary contact name if mentioned'),
@@ -28,6 +35,8 @@ export const ExtractedCustomerSchema = z.object({
   oneTimeRevenue: z.number().describe('Total one-time fees in AED (setup, onboarding, integrations)'),
   billingCycle: z.enum(['Monthly', 'Quarterly', 'Half Yearly', 'Annual', 'One Time']),
   discount: z.number().min(0).max(100).describe('Discount percentage if any'),
+  billingPhases: z.array(BillingPhaseSchema).nullable().optional()
+    .describe('Ordered billing phases if the contract has phased/changing billing (e.g. monthly for 3 months then quarterly). Null if single uniform cycle.'),
 });
 
 export const ExtractedContractSchema = z.object({
@@ -94,3 +103,4 @@ export const ContractExtractionSchema = z.object({
 export type ContractExtraction = z.infer<typeof ContractExtractionSchema>;
 export type DealAnalysis = z.infer<typeof DealAnalysisSchema>;
 export type ExtractedRevenueStream = z.infer<typeof ExtractedRevenueStreamSchema>;
+export type BillingPhase = z.infer<typeof BillingPhaseSchema>;

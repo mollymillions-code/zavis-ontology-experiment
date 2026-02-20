@@ -1,4 +1,4 @@
-import type { Client, ReceivableEntry, ReceivableStatus } from '../models/platform-types';
+import type { Client, ReceivableEntry, ReceivableStatus, BillingPhase } from '../models/platform-types';
 
 // ========== REVENUE TYPE CLASSIFICATION ==========
 
@@ -143,14 +143,93 @@ function addMonths(monthStr: string, count: number): string {
 }
 
 /**
+ * Generate receivable entries for phased billing schedules.
+ * Walks through each phase in order, generating entries for its duration,
+ * then moves to the next phase. The final phase with durationMonths=0
+ * fills the remainder of the window.
+ */
+export function generateReceivablesWithPhases(
+  client: Client,
+  phases: BillingPhase[],
+  startMonth?: string,
+  monthsAhead: number = 12
+): ReceivableEntry[] {
+  const start = startMonth || getCurrentMonth();
+  const receivables: ReceivableEntry[] = [];
+  let monthOffset = 0;
+
+  for (let pi = 0; pi < phases.length; pi++) {
+    const phase = phases[pi];
+    const freq = getBillingFrequencyMonths(phase.cycle);
+    if (freq === 0) {
+      // One-time phase — single entry
+      const month = addMonths(start, monthOffset);
+      receivables.push({
+        id: `rcv-${client.id}-ph${pi}-${month}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        clientId: client.id,
+        month,
+        amount: phase.amount,
+        description: `${phase.note || 'One-Time Payment'} (Phase ${pi + 1})`,
+        status: 'pending',
+      });
+      continue;
+    }
+
+    // How many months does this phase cover?
+    const phaseDuration = phase.durationMonths > 0
+      ? phase.durationMonths
+      : (monthsAhead - monthOffset); // 0 = fill remainder
+
+    const phaseEnd = Math.min(monthOffset + phaseDuration, monthsAhead);
+    const cycleLabel = getBillingLabel(phase.cycle);
+    const noteLabel = phase.note ? ` — ${phase.note}` : '';
+
+    for (let m = monthOffset; m < phaseEnd; m += freq) {
+      const month = addMonths(start, m);
+      receivables.push({
+        id: `rcv-${client.id}-ph${pi}-${month}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        clientId: client.id,
+        month,
+        amount: phase.amount,
+        description: `${cycleLabel}${noteLabel}`,
+        status: 'pending',
+      });
+    }
+
+    monthOffset = phaseEnd;
+    if (monthOffset >= monthsAhead) break;
+  }
+
+  // Also add one-time revenue if present
+  if (client.oneTimeRevenue > 0 && client.pricingModel !== 'one_time_only') {
+    receivables.push({
+      id: `rcv-${client.id}-ot-${Date.now()}`,
+      clientId: client.id,
+      month: start,
+      amount: client.oneTimeRevenue,
+      description: `${client.name} - One-Time Setup`,
+      status: 'pending',
+    });
+  }
+
+  return receivables;
+}
+
+/**
  * Generate receivable entries for a client based on their billing cycle.
  * Generates entries from startMonth for up to 12 months forward.
+ * If the client has billing phases, delegates to generateReceivablesWithPhases.
  */
 export function generateReceivablesForClient(
   client: Client,
   startMonth?: string,
   monthsAhead: number = 12
 ): ReceivableEntry[] {
+  // Delegate to phased generator if billing phases exist
+  if (client.billingPhases && client.billingPhases.length > 0) {
+    return generateReceivablesWithPhases(client, client.billingPhases, startMonth, monthsAhead);
+  }
+
   const start = startMonth || getCurrentMonth();
   const receivables: ReceivableEntry[] = [];
 

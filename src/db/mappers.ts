@@ -1,6 +1,7 @@
 import type {
   Client,
   BillingAddress,
+  BillingPhase,
   ReceivableEntry,
   MonthlySnapshot,
   PricingWhatIf,
@@ -42,6 +43,7 @@ export function dbRowToClient(row: Record<string, unknown>): Client {
     companyLegalName: (row.companyLegalName as string) || null,
     trn: (row.trn as string) || null,
     billingAddress: (row.billingAddress as BillingAddress) || null,
+    billingPhases: (row.billingPhases as BillingPhase[]) || null,
     defaultTerms: (row.defaultTerms as string) || null,
     createdAt: row.createdAt instanceof Date
       ? (row.createdAt as Date).toISOString()
@@ -74,6 +76,7 @@ export function clientToDbValues(c: Client) {
     companyLegalName: c.companyLegalName ?? null,
     trn: c.trn ?? null,
     billingAddress: c.billingAddress ?? null,
+    billingPhases: c.billingPhases ?? null,
     defaultTerms: c.defaultTerms ?? null,
     createdAt: new Date(c.createdAt),
     updatedAt: new Date(c.updatedAt),

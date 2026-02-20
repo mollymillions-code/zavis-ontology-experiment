@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { buildContractExtractionPrompt } from '@/lib/prompts/contract-extraction-prompt';
+import { buildContractExtractionPrompt, buildContractUpdatePrompt } from '@/lib/prompts/contract-extraction-prompt';
 import { ContractExtractionSchema } from '@/lib/schemas/contract-extraction';
 
 export const maxDuration = 60;
@@ -79,6 +79,21 @@ function normalizeExtraction(raw: Record<string, unknown>): Record<string, unkno
     }
   }
 
+  // Normalize billingPhases — ensure valid cycle values, coerce durationMonths to number
+  if (customer && Array.isArray(customer.billingPhases)) {
+    const validCycles = new Set(['Monthly', 'Quarterly', 'Half Yearly', 'Annual', 'One Time']);
+    customer.billingPhases = (customer.billingPhases as Record<string, unknown>[]).map((phase) => ({
+      ...phase,
+      cycle: validCycles.has(String(phase.cycle)) ? phase.cycle : 'Monthly',
+      durationMonths: Number(phase.durationMonths) || 0,
+      amount: Number(phase.amount) || 0,
+      note: phase.note ?? null,
+    }));
+    // If only one phase, it's effectively a single cycle — keep it for explicitness
+  } else if (customer) {
+    customer.billingPhases = null;
+  }
+
   return normalized;
 }
 
@@ -94,6 +109,7 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get('contract') as File | null;
+    const existingSummary = formData.get('existingSummary') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -110,10 +126,15 @@ export async function POST(req: Request) {
     const buffer = await file.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
 
+    // Use update prompt when existing summary is provided (saves ~90% input tokens)
+    const systemPrompt = existingSummary
+      ? buildContractUpdatePrompt(existingSummary)
+      : buildContractExtractionPrompt();
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: 'gemini-3-pro-preview',
-      systemInstruction: buildContractExtractionPrompt(),
+      systemInstruction: systemPrompt,
     });
 
     const result = await model.generateContent([
@@ -124,7 +145,9 @@ export async function POST(req: Request) {
         },
       },
       {
-        text: 'Extract all contract details from this document and provide a complete deal analysis. Return ONLY a valid JSON object matching the required schema — no markdown, no code blocks, no explanation, just pure JSON.',
+        text: existingSummary
+          ? 'This is an updated/amended contract for an existing client. Compare against the existing summary in your instructions, extract the complete current state, and highlight changes. Return ONLY a valid JSON object matching the required schema — no markdown, no code blocks, no explanation, just pure JSON.'
+          : 'Extract all contract details from this document and provide a complete deal analysis. Return ONLY a valid JSON object matching the required schema — no markdown, no code blocks, no explanation, just pure JSON.',
       },
     ]);
 
