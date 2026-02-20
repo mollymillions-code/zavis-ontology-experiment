@@ -73,6 +73,52 @@ function recalcProfitability(
   return profitability;
 }
 
+const LOCATION_CURRENCY_MAP: [RegExp, string, number][] = [
+  [/india|mumbai|delhi|bangalore|chennai|hyderabad|kolkata|pune|jaipur|lucknow|ahmedabad|indian/i, 'INR', 22.7],
+  [/usa|united states|america|new york|california|texas|florida|chicago|los angeles|san francisco/i, 'USD', 0.27],
+  [/uk|united kingdom|london|manchester|birmingham|british|england|scotland/i, 'GBP', 0.22],
+  [/europe|germany|france|spain|italy|netherlands|berlin|paris|madrid|rome|eu\b/i, 'EUR', 0.25],
+  [/saudi|riyadh|jeddah|ksa/i, 'SAR', 1.02],
+  [/bahrain|manama/i, 'BHD', 0.10],
+  [/qatar|doha/i, 'QAR', 0.99],
+  [/oman|muscat/i, 'OMR', 0.10],
+  [/kuwait/i, 'KWD', 0.08],
+  [/pakistan|karachi|lahore|islamabad/i, 'PKR', 75.6],
+  [/bangladesh|dhaka/i, 'BDT', 29.9],
+  [/sri lanka|colombo/i, 'LKR', 81.5],
+  [/egypt|cairo/i, 'EGP', 13.4],
+];
+
+/** Infer currency from prospect location if LLM left it as null/AED */
+function inferCurrencyFromLocation(report: Record<string, unknown>) {
+  const mc = report.marketContext as Record<string, unknown> | undefined;
+  const prospect = report.prospect as Record<string, unknown> | undefined;
+  if (!mc || !prospect) return;
+
+  // If LLM already set a conversion rate, trust it
+  if (mc.conversionRate && mc.currency !== 'AED') return;
+
+  const location = String(prospect.location || '');
+  const name = String(prospect.name || '');
+  const combined = `${location} ${name}`;
+
+  for (const [pattern, currency, rate] of LOCATION_CURRENCY_MAP) {
+    if (pattern.test(combined)) {
+      mc.currency = currency;
+      mc.conversionRate = rate;
+
+      // Also set perSeatPriceLocal on each option
+      const options = report.options as Array<Record<string, unknown>> | undefined;
+      if (options) {
+        for (const opt of options) {
+          opt.perSeatPriceLocal = Math.round(Number(opt.perSeatPrice || 0) * rate);
+        }
+      }
+      return;
+    }
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -147,6 +193,9 @@ export async function POST(req: Request) {
 
     // Step 6: Deterministic profitability override
     rawResult.profitability = recalcProfitability(rawResult, ctx.totalSeats);
+
+    // Step 6b: Infer currency from prospect location if LLM didn't set it
+    inferCurrencyFromLocation(rawResult);
 
     // Step 7: Validate
     const parsed = PricingReportSchema.safeParse(rawResult);

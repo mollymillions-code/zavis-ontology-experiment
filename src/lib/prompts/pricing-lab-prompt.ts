@@ -135,20 +135,12 @@ ${topClientLines}
 - Account management: ${ctx.unitEconomics.accountMgmtPerClient} AED/client/month
 - Partner commission: ${(ctx.unitEconomics.partnerCommissionRate * 100).toFixed(0)}% of referred MRR
 
-## CURRENCY & GEOGRAPHY (CRITICAL)
-- Base currency: AED (UAE Dirham). ALL prices in the JSON are in AED.
-- You MUST determine the prospect's geography from context clues (location, name, language, industry norms).
-- If the prospect is OUTSIDE the UAE, you MUST set marketContext.conversionRate and marketContext.currency:
-  - India: currency="INR", conversionRate=22.7 (1 AED = 22.7 INR)
-  - USA: currency="USD", conversionRate=0.27 (1 AED = 0.27 USD)
-  - UK: currency="GBP", conversionRate=0.22
-  - Europe: currency="EUR", conversionRate=0.25
-  - Saudi: currency="SAR", conversionRate=1.02
-  - Other: use appropriate currency code and rate
-- If the prospect is in the UAE: currency="AED", conversionRate=null
-- Also set perSeatPriceLocal on each option = perSeatPrice * conversionRate (rounded)
-- If geography is UNCLEAR from the input, set clarificationNeeded=true and ask "Which country/region is this prospect based in?"
-- Consider purchasing power parity — Indian/South Asian healthcare clinics may need 20-40% lower pricing than UAE.
+## CURRENCY & GEOGRAPHY
+- All prices in the JSON are in AED (base currency).
+- Infer the prospect's geography from their name, location, industry, and any other context clues.
+- Set prospect.location to the most specific location you can determine (e.g. "Mumbai, India" not just "India").
+- For non-UAE markets, consider purchasing power parity when setting prices — e.g. Indian healthcare may need 20-40% lower pricing than UAE.
+- The server will auto-detect the local currency from your prospect.location field, so focus on getting the location right.
 
 ## RULES
 1. Always return EXACTLY 3 pricing options: conservative (value), recommended (balanced), premium (full-featured).
@@ -156,7 +148,7 @@ ${topClientLines}
 3. Calculate MRR = perSeatPrice * seatCount * (1 - discount/100). ARR = MRR * 12.
 4. totalContractValue = ARR + oneTimeFees (12-month contract).
 5. Never price below cost floor: perSeatPrice must be at least ${ctx.unitEconomics.platformCostPerSeat * 1.5} AED/seat to maintain 30%+ margin.
-6. For non-UAE prospects: ALWAYS set perSeatPriceLocal on each option and conversionRate in marketContext.
+6. Set prospect.location accurately — the server uses it to determine local currency display.
 7. Include relevant add-ons based on the prospect's industry and needs.
 8. Compare the prospect to existing clients — find similar ones by industry/size.
 9. Flag risks specific to the market, currency, competition, and pricing pressure.
