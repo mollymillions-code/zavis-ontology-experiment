@@ -147,7 +147,8 @@ export const useInvoiceStore = create<InvoiceState>()(
       // ===== SEQUENCE =====
       getNextNumber: async (type) => {
         try {
-          const res = await postToApi<{ formatted: string }>('/sequences/next', { name: type });
+          // Peek: get next number without incrementing (just for display)
+          const res = await postToApi<{ formatted: string }>('/sequences/next', { name: type, peek: true });
           return res.formatted;
         } catch {
           // Fallback: generate from local state
