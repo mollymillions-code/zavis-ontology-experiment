@@ -68,7 +68,10 @@ export const useClientStore = create<ClientState>()(
           (updates.billingCycle !== undefined && updates.billingCycle !== oldClient?.billingCycle) ||
           (updates.oneTimeRevenue !== undefined && updates.oneTimeRevenue !== oldClient?.oneTimeRevenue);
 
-        if (oldClient && billingChanged) {
+        // Also trigger if client has zero receivables (e.g. created before auto-gen was deployed)
+        const hasNoReceivables = get().receivables.filter((r) => r.clientId === id).length === 0;
+
+        if (oldClient && (billingChanged || hasNoReceivables)) {
           // Delete all pending/overdue receivables for this client and regenerate
           const currentReceivables = get().receivables;
           const toDelete = currentReceivables.filter(
