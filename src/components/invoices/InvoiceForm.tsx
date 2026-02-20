@@ -185,6 +185,19 @@ export default function InvoiceForm({
           updatedAt: now,
         };
         addInvoice(newInvoice);
+
+        // Sync the sequence so the next invoice continues from this number
+        const numMatch = invoiceNumber.match(/(\d+)/);
+        if (numMatch) {
+          const numValue = parseInt(numMatch[1], 10);
+          if (numValue > 0) {
+            fetch('/api/sequences/next', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: 'invoice', setValue: numValue }),
+            }).catch(() => {});
+          }
+        }
       }
 
       router.push('/invoices');
@@ -303,8 +316,9 @@ export default function InvoiceForm({
                 <input
                   type="text"
                   value={invoiceNumber}
-                  readOnly
-                  style={{ ...inputStyle, background: '#faf8f4', fontFamily: "'Space Mono', monospace", fontWeight: 700 }}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  placeholder="e.g. INV-000038"
+                  style={{ ...inputStyle, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}
                 />
               </div>
               <div>
