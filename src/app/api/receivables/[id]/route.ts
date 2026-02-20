@@ -22,3 +22,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    await db.delete(receivables).where(eq(receivables.id, params.id));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error deleting receivable:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
+}

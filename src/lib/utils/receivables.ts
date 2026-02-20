@@ -1,4 +1,4 @@
-import type { ReceivableEntry, ReceivableStatus } from '../models/platform-types';
+import type { Client, ReceivableEntry, ReceivableStatus } from '../models/platform-types';
 
 // ========== REVENUE TYPE CLASSIFICATION ==========
 
@@ -100,4 +100,106 @@ export function filterReceivablesByStatus(
 ): ReceivableEntry[] {
   if (status === 'all') return receivables;
   return receivables.filter((r) => r.status === status);
+}
+
+// ========== RECEIVABLE AUTO-GENERATION ==========
+
+function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getBillingFrequencyMonths(billingCycle: string | null | undefined): number {
+  switch (billingCycle) {
+    case 'Monthly': return 1;
+    case 'Quarterly': return 3;
+    case 'Half Yearly': return 6;
+    case 'Annual': return 12;
+    case 'One Time': return 0;
+    default: return 1;
+  }
+}
+
+function getBillingLabel(billingCycle: string | null | undefined): string {
+  switch (billingCycle) {
+    case 'Monthly': return 'Monthly Subscription';
+    case 'Quarterly': return 'Quarterly Subscription Fee';
+    case 'Half Yearly': return 'Half Yearly Subscription';
+    case 'Annual': return 'Annual Subscription';
+    default: return 'Subscription Fee';
+  }
+}
+
+function getBillingAmount(mrr: number, billingCycle: string | null | undefined): number {
+  const freq = getBillingFrequencyMonths(billingCycle);
+  if (freq === 0) return 0;
+  return Math.round(mrr * freq * 100) / 100;
+}
+
+function addMonths(monthStr: string, count: number): string {
+  const [y, m] = monthStr.split('-').map(Number);
+  const date = new Date(y, m - 1 + count, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Generate receivable entries for a client based on their billing cycle.
+ * Generates entries from startMonth for up to 12 months forward.
+ */
+export function generateReceivablesForClient(
+  client: Client,
+  startMonth?: string,
+  monthsAhead: number = 12
+): ReceivableEntry[] {
+  const start = startMonth || getCurrentMonth();
+  const receivables: ReceivableEntry[] = [];
+
+  // One-time revenue
+  if (client.oneTimeRevenue > 0 && client.pricingModel === 'one_time_only') {
+    receivables.push({
+      id: `rcv-${client.id}-ot-${Date.now()}`,
+      clientId: client.id,
+      month: start,
+      amount: client.oneTimeRevenue,
+      description: `${client.name} - One-Time Payment`,
+      status: 'pending',
+    });
+    return receivables;
+  }
+
+  // Recurring revenue
+  if (client.mrr <= 0 || client.status === 'inactive') return receivables;
+
+  const freq = getBillingFrequencyMonths(client.billingCycle);
+  if (freq === 0) return receivables;
+
+  const billingAmount = getBillingAmount(client.mrr, client.billingCycle);
+  const label = getBillingLabel(client.billingCycle);
+  const planLabel = client.plan ? ` (${client.plan})` : '';
+
+  for (let i = 0; i < monthsAhead; i += freq) {
+    const month = addMonths(start, i);
+    receivables.push({
+      id: `rcv-${client.id}-${month}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      clientId: client.id,
+      month,
+      amount: billingAmount,
+      description: `${label}${planLabel}`,
+      status: 'pending',
+    });
+  }
+
+  // If there's also one-time revenue on a subscription client, add it as a separate entry
+  if (client.oneTimeRevenue > 0) {
+    receivables.push({
+      id: `rcv-${client.id}-ot-${Date.now()}`,
+      clientId: client.id,
+      month: start,
+      amount: client.oneTimeRevenue,
+      description: `${client.name} - One-Time Setup`,
+      status: 'pending',
+    });
+  }
+
+  return receivables;
 }

@@ -4,6 +4,7 @@ import type { Client, ClientStatus, ReceivableEntry } from '../models/platform-t
 import { SEED_CLIENTS } from '../models/seed-clients';
 import { SEED_RECEIVABLES } from '../models/seed-receivables';
 import { fetchFromApi, postToApi, putToApi, deleteFromApi } from '../db-sync';
+import { generateReceivablesForClient } from '../utils/receivables';
 
 interface ClientState {
   clients: Client[];
@@ -37,6 +38,19 @@ export const useClientStore = create<ClientState>()(
           clients: [...state.clients, client],
         }));
         postToApi('/clients', client).catch(console.error);
+
+        // Auto-generate receivables based on billing cycle
+        if (client.status === 'active' && (client.mrr > 0 || client.oneTimeRevenue > 0)) {
+          const newReceivables = generateReceivablesForClient(client);
+          if (newReceivables.length > 0) {
+            set((state) => ({
+              receivables: [...state.receivables, ...newReceivables],
+            }));
+            for (const r of newReceivables) {
+              postToApi('/receivables', r).catch(console.error);
+            }
+          }
+        }
       },
 
       updateClient: (id, updates) => {
@@ -49,28 +63,42 @@ export const useClientStore = create<ClientState>()(
           ),
         }));
 
-        // If MRR changed, proportionally scale all pending/overdue receivables for this client
-        if (
-          oldClient &&
-          updates.mrr !== undefined &&
-          updates.mrr !== oldClient.mrr &&
-          oldClient.mrr > 0
-        ) {
-          const ratio = updates.mrr / oldClient.mrr;
+        const billingChanged =
+          (updates.mrr !== undefined && updates.mrr !== oldClient?.mrr) ||
+          (updates.billingCycle !== undefined && updates.billingCycle !== oldClient?.billingCycle) ||
+          (updates.oneTimeRevenue !== undefined && updates.oneTimeRevenue !== oldClient?.oneTimeRevenue);
+
+        if (oldClient && billingChanged) {
+          // Delete all pending/overdue receivables for this client and regenerate
           const currentReceivables = get().receivables;
+          const toDelete = currentReceivables.filter(
+            (r) => r.clientId === id && (r.status === 'pending' || r.status === 'overdue')
+          );
 
-          for (const r of currentReceivables) {
-            if (r.clientId !== id) continue;
-            // Only update future/outstanding entries — don't touch paid or already invoiced
-            if (r.status === 'paid' || r.status === 'invoiced') continue;
+          // Remove from store
+          set((state) => ({
+            receivables: state.receivables.filter(
+              (r) => !(r.clientId === id && (r.status === 'pending' || r.status === 'overdue'))
+            ),
+          }));
 
-            const newAmount = Math.round(r.amount * ratio * 100) / 100;
-            set((state) => ({
-              receivables: state.receivables.map((x) =>
-                x.id === r.id ? { ...x, amount: newAmount } : x
-              ),
-            }));
-            putToApi(`/receivables/${r.id}`, { amount: newAmount }).catch(console.error);
+          // Delete from DB
+          for (const r of toDelete) {
+            deleteFromApi(`/receivables/${r.id}`).catch(console.error);
+          }
+
+          // Generate new receivables with updated billing info
+          const updatedClient = get().clients.find((c) => c.id === id);
+          if (updatedClient && updatedClient.status === 'active' && (updatedClient.mrr > 0 || updatedClient.oneTimeRevenue > 0)) {
+            const newReceivables = generateReceivablesForClient(updatedClient);
+            if (newReceivables.length > 0) {
+              set((state) => ({
+                receivables: [...state.receivables, ...newReceivables],
+              }));
+              for (const r of newReceivables) {
+                postToApi('/receivables', r).catch(console.error);
+              }
+            }
           }
         }
 
