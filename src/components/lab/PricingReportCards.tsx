@@ -44,6 +44,23 @@ const mono: React.CSSProperties = {
   fontFamily: "'Space Mono', monospace", fontWeight: 700, color: '#1a1a1a',
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: '₹', USD: '$', GBP: '£', EUR: '€', SAR: 'SAR ', BHD: 'BHD ', QAR: 'QAR ', OMR: 'OMR ',
+};
+
+/** Format AED amount + local currency equivalent when outside UAE */
+function dualPrice(
+  aed: number,
+  ctx: { currency: string; conversionRate: number | null } | null,
+  decimals = 0,
+): string {
+  const aedStr = formatAED(aed, decimals);
+  if (!ctx?.conversionRate || ctx.currency === 'AED') return aedStr;
+  const local = Math.round(aed * ctx.conversionRate);
+  const sym = CURRENCY_SYMBOLS[ctx.currency] || ctx.currency + ' ';
+  return `${aedStr} (${sym}${local.toLocaleString()})`;
+}
+
 function Badge({ text, bg, color }: { text: string; bg: string; color: string }) {
   return (
     <span style={{
@@ -58,6 +75,7 @@ function Badge({ text, bg, color }: { text: string; bg: string; color: string })
 
 export default function PricingReportCards({ report }: { report: PricingReport }) {
   const { prospect, options, recommendation, profitability, portfolioComparison, risks, marketContext } = report;
+  const cx = marketContext.conversionRate ? marketContext : null; // dual-price context (null = UAE, AED only)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -134,10 +152,10 @@ export default function PricingReportCards({ report }: { report: PricingReport }
               </div>
 
               <div style={{ fontSize: 28, ...mono, color: '#00c853', marginBottom: 2 }}>
-                {formatAED(opt.perSeatPrice)}
+                {dualPrice(opt.perSeatPrice, cx)}
               </div>
               <div style={{ fontSize: 11, color: '#999', fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}>
-                per seat/month{opt.perSeatPriceLocal ? ` (₹${opt.perSeatPriceLocal.toLocaleString()})` : ''}
+                per seat/month
                 {opt.discount > 0 && <span style={{ color: '#ff6e40', fontWeight: 600, marginLeft: 6 }}>-{opt.discount}%</span>}
               </div>
 
@@ -145,10 +163,10 @@ export default function PricingReportCards({ report }: { report: PricingReport }
                 {[
                   { l: 'Seats', v: String(opt.seatCount) },
                   { l: 'Billing', v: opt.billingCycle },
-                  { l: 'MRR', v: formatAED(opt.mrr) },
-                  { l: 'ARR', v: formatAED(opt.arr) },
-                  { l: 'One-Time', v: formatAED(opt.oneTimeFees) },
-                  { l: '12mo Value', v: formatAED(opt.totalContractValue) },
+                  { l: 'MRR', v: dualPrice(opt.mrr, cx) },
+                  { l: 'ARR', v: dualPrice(opt.arr, cx) },
+                  { l: 'One-Time', v: dualPrice(opt.oneTimeFees, cx) },
+                  { l: '12mo Value', v: dualPrice(opt.totalContractValue, cx) },
                 ].map((row) => (
                   <div key={row.l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ ...label, textTransform: 'none', fontSize: 11 }}>{row.l}</span>
@@ -162,7 +180,7 @@ export default function PricingReportCards({ report }: { report: PricingReport }
                   <span style={{ ...label, fontSize: 10 }}>Add-ons</span>
                   {opt.addOns.map((a, j) => (
                     <div key={j} style={{ fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>
-                      {a.name} — {formatAED(a.amount)} {a.frequency}
+                      {a.name} — {dualPrice(a.amount, cx)} {a.frequency}
                     </div>
                   ))}
                 </div>
@@ -191,7 +209,7 @@ export default function PricingReportCards({ report }: { report: PricingReport }
         <div style={{ marginTop: 8, display: 'flex', gap: 16 }}>
           <div>
             <span style={{ ...label, fontSize: 10 }}>Floor Price</span>
-            <p style={{ ...mono, fontSize: 13, margin: '2px 0 0', color: '#ff6e40' }}>{formatAED(recommendation.negotiationFloor.perSeatPrice)}/seat</p>
+            <p style={{ ...mono, fontSize: 13, margin: '2px 0 0', color: '#ff6e40' }}>{dualPrice(recommendation.negotiationFloor.perSeatPrice, cx)}/seat</p>
           </div>
           <div>
             <span style={{ ...label, fontSize: 10 }}>Max Discount</span>
@@ -199,7 +217,7 @@ export default function PricingReportCards({ report }: { report: PricingReport }
           </div>
           <div>
             <span style={{ ...label, fontSize: 10 }}>Floor MRR</span>
-            <p style={{ ...mono, fontSize: 13, margin: '2px 0 0', color: '#ff6e40' }}>{formatAED(recommendation.negotiationFloor.mrr)}</p>
+            <p style={{ ...mono, fontSize: 13, margin: '2px 0 0', color: '#ff6e40' }}>{dualPrice(recommendation.negotiationFloor.mrr, cx)}</p>
           </div>
         </div>
       </div>
@@ -224,10 +242,10 @@ export default function PricingReportCards({ report }: { report: PricingReport }
                   <td style={{ padding: '10px 6px', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: '#1a1a1a' }}>
                     {opt?.label || `Option ${p.optionIndex + 1}`}
                   </td>
-                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: '#00c853' }}>{formatAED(p.revenue)}</td>
-                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: '#ff6e40' }}>{formatAED(p.directCosts)}</td>
-                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: '#ff6e40' }}>{formatAED(p.sharedCosts)}</td>
-                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: p.grossProfit >= 0 ? '#00c853' : '#ff3d00' }}>{formatAED(p.grossProfit)}</td>
+                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: '#00c853' }}>{dualPrice(p.revenue, cx)}</td>
+                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: '#ff6e40' }}>{dualPrice(p.directCosts, cx)}</td>
+                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: '#ff6e40' }}>{dualPrice(p.sharedCosts, cx)}</td>
+                  <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12, color: p.grossProfit >= 0 ? '#00c853' : '#ff3d00' }}>{dualPrice(p.grossProfit, cx)}</td>
                   <td style={{ padding: '10px 6px', textAlign: 'right', ...mono, fontSize: 12 }}>{p.grossMargin}%</td>
                   <td style={{ padding: '10px 6px', textAlign: 'right' }}>
                     <Badge text={p.verdict.replace('_', ' ')} bg={vc.bg} color={vc.text} />
@@ -245,7 +263,7 @@ export default function PricingReportCards({ report }: { report: PricingReport }
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
           <div style={{ textAlign: 'center', padding: 12, background: '#f5f0e8', borderRadius: 8 }}>
             <span style={label}>Avg MRR/Client</span>
-            <p style={{ ...mono, fontSize: 16, margin: '4px 0 0' }}>{formatAED(portfolioComparison.avgMRRPerClient)}</p>
+            <p style={{ ...mono, fontSize: 16, margin: '4px 0 0' }}>{dualPrice(portfolioComparison.avgMRRPerClient, cx)}</p>
           </div>
           <div style={{ textAlign: 'center', padding: 12, background: '#f5f0e8', borderRadius: 8 }}>
             <span style={label}>Avg Seats/Client</span>
@@ -272,7 +290,7 @@ export default function PricingReportCards({ report }: { report: PricingReport }
                 </div>
                 <div style={{ display: 'flex', gap: 16 }}>
                   <span style={{ ...mono, fontSize: 12 }}>{c.seats} seats</span>
-                  <span style={{ ...mono, fontSize: 12, color: '#00c853' }}>{formatAED(c.mrr)} MRR</span>
+                  <span style={{ ...mono, fontSize: 12, color: '#00c853' }}>{dualPrice(c.mrr, cx)} MRR</span>
                 </div>
               </div>
             ))}
