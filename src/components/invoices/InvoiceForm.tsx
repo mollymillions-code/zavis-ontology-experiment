@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Send, ArrowLeft, Loader2 } from 'lucide-react';
+import { Save, Send, ArrowLeft, Loader2, CreditCard } from 'lucide-react';
 import type {
   Invoice,
   InvoiceLineItem,
@@ -62,6 +62,8 @@ export default function InvoiceForm({
   );
   const [receivableId] = useState(invoice?.receivableId || prefillReceivableId || null);
   const [contractId, setContractId] = useState<string | null>(invoice?.contractId || null);
+  const [enableStripe, setEnableStripe] = useState(true);
+  const [enableBank, setEnableBank] = useState(true);
 
   const selectedClient = clients.find((c) => c.id === clientId) || null;
 
@@ -403,48 +405,125 @@ export default function InvoiceForm({
           currency={currency}
         />
 
-        {/* Notes & Terms */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: 12,
-            padding: 20,
-            border: '1px solid #e0dbd2',
-          }}>
-            <label style={labelStyle}>Customer Notes</label>
-            <textarea
-              value={customerNotes || ''}
-              onChange={(e) => setCustomerNotes(e.target.value)}
-              placeholder="Notes visible on the invoice..."
-              rows={3}
-              style={{
-                ...inputStyle,
-                resize: 'vertical',
-                minHeight: 80,
-              }}
-            />
-          </div>
+        {/* Notes */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: 12,
+          padding: 20,
+          border: '1px solid #e0dbd2',
+        }}>
+          <label style={labelStyle}>Customer Notes</label>
+          <textarea
+            value={customerNotes || ''}
+            onChange={(e) => setCustomerNotes(e.target.value)}
+            placeholder="Notes visible on the invoice..."
+            rows={3}
+            style={{
+              ...inputStyle,
+              resize: 'vertical',
+              minHeight: 80,
+            }}
+          />
+        </div>
 
-          <div style={{
-            background: '#ffffff',
-            borderRadius: 12,
-            padding: 20,
-            border: '1px solid #e0dbd2',
-          }}>
-            <label style={labelStyle}>Terms & Conditions</label>
-            <textarea
-              value={termsAndConditions || ''}
-              onChange={(e) => setTermsAndConditions(e.target.value)}
-              placeholder="Bank details, payment instructions..."
-              rows={3}
-              style={{
-                ...inputStyle,
-                resize: 'vertical',
-                minHeight: 80,
-                fontFamily: "'Space Mono', monospace",
-                fontSize: 11,
-              }}
-            />
+        {/* Payment Method Selection */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: 12,
+          padding: 20,
+          border: '1px solid #e0dbd2',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <CreditCard size={16} style={{ color: '#1a1a1a' }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#666', fontFamily: "'DM Sans', sans-serif", textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Payment Method
+            </span>
+          </div>
+          <p style={{ fontSize: 11, color: '#999', fontFamily: "'DM Sans', sans-serif", marginBottom: 16 }}>
+            Select how your client can pay this invoice. You can enable one or both.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Stripe Option */}
+            <div style={{
+              padding: 14, borderRadius: 10,
+              border: enableStripe ? '2px solid #635bff' : '1px solid #e0dbd2',
+              background: enableStripe ? 'rgba(99,91,255,0.04)' : '#fff',
+              transition: 'all 0.15s ease',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  type="checkbox"
+                  id="enableStripe"
+                  checked={enableStripe}
+                  onChange={(e) => setEnableStripe(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#635bff' }}
+                />
+                <label htmlFor="enableStripe" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
+                  <span style={{
+                    background: '#635bff', color: '#ffffff', padding: '3px 10px',
+                    borderRadius: 4, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                  }}>
+                    Stripe
+                  </span>
+                  <span style={{ fontSize: 12, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                    Pay online with credit/debit card
+                  </span>
+                </label>
+              </div>
+              {enableStripe && (
+                <p style={{ fontSize: 10, color: '#635bff', fontFamily: "'DM Sans', sans-serif", marginTop: 8, marginLeft: 26 }}>
+                  A &ldquo;Pay Online&rdquo; button will appear on the invoice for your client.
+                </p>
+              )}
+            </div>
+
+            {/* Bank Transfer Option */}
+            <div style={{
+              padding: 14, borderRadius: 10,
+              border: enableBank ? '2px solid #00a844' : '1px solid #e0dbd2',
+              background: enableBank ? 'rgba(0,168,68,0.04)' : '#fff',
+              transition: 'all 0.15s ease',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  type="checkbox"
+                  id="enableBank"
+                  checked={enableBank}
+                  onChange={(e) => setEnableBank(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#00a844' }}
+                />
+                <label htmlFor="enableBank" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
+                  <span style={{
+                    background: '#1a1a1a', color: '#ffffff', padding: '3px 10px',
+                    borderRadius: 4, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                  }}>
+                    Bank
+                  </span>
+                  <span style={{ fontSize: 12, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                    Pay via bank transfer / wire
+                  </span>
+                </label>
+              </div>
+              {enableBank && (
+                <div style={{ marginTop: 10, marginLeft: 26 }}>
+                  <label style={{ ...labelStyle, marginBottom: 6 }}>Bank Details (shown on invoice)</label>
+                  <textarea
+                    value={termsAndConditions || ''}
+                    onChange={(e) => setTermsAndConditions(e.target.value)}
+                    placeholder="Account holder, bank name, IBAN, BIC/SWIFT..."
+                    rows={4}
+                    style={{
+                      ...inputStyle,
+                      resize: 'vertical',
+                      minHeight: 80,
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: 11,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -205,10 +205,47 @@ export default function InvoicePDFPreview({ invoice, client }: InvoicePDFPreview
         </div>
       )}
 
-      {/* Terms & Conditions */}
+      {/* Payment Options */}
+      {invoice.balanceDue > 0 && invoice.status !== 'paid' && invoice.status !== 'void' && (
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e0dbd2' }}>
+          <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Payment Options</div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {/* Stripe Pay Button */}
+            <button
+              onClick={() => {
+                fetch('/api/stripe/checkout', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ invoiceId: invoice.id }),
+                }).then(r => r.json()).then(data => {
+                  if (data.url) window.location.href = data.url;
+                  else alert(data.error || 'Failed to create payment session');
+                }).catch(() => alert('Failed to initiate payment'));
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 24px', borderRadius: 8,
+                border: 'none', background: '#635bff', color: '#ffffff',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                boxShadow: '0 2px 8px rgba(99,91,255,0.3)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                <line x1="1" y1="10" x2="23" y2="10"/>
+              </svg>
+              Pay Online via Stripe
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bank Details / Terms & Conditions */}
       {invoice.termsAndConditions && (
         <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #e0dbd2' }}>
-          <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Terms & Conditions</div>
+          <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Bank Transfer Details</div>
           <div style={{ fontSize: 10, color: '#666', lineHeight: 1.6, fontFamily: "'Space Mono', monospace", whiteSpace: 'pre-line' }}>
             {invoice.termsAndConditions}
           </div>

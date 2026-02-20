@@ -163,7 +163,7 @@ export default function InvoiceDetailPage() {
               <CreditCard size={14} /> Record Payment
             </button>
           )}
-          {canRecordPayment(invoice.status) && (
+          {invoice.status !== 'paid' && invoice.status !== 'void' && (
             <button
               onClick={handlePayViaStripe}
               disabled={stripeLoading}
