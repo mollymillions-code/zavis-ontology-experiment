@@ -11,6 +11,41 @@ interface ChatMessage {
   text: string;
 }
 
+const LOCATION_CURRENCY: [RegExp, string, number][] = [
+  [/india|mumbai|delhi|bangalore|chennai|hyderabad|kolkata|pune|jaipur|lucknow|ahmedabad|indian/i, 'INR', 22.7],
+  [/usa|united states|america|new york|california|texas|florida/i, 'USD', 0.27],
+  [/uk|united kingdom|london|british|england/i, 'GBP', 0.22],
+  [/europe|germany|france|spain|italy|netherlands/i, 'EUR', 0.25],
+  [/saudi|riyadh|jeddah|ksa/i, 'SAR', 1.02],
+  [/pakistan|karachi|lahore|islamabad/i, 'PKR', 75.6],
+  [/bangladesh|dhaka/i, 'BDT', 29.9],
+  [/egypt|cairo/i, 'EGP', 13.4],
+  [/qatar|doha/i, 'QAR', 0.99],
+  [/bahrain|manama/i, 'BHD', 0.10],
+  [/oman|muscat/i, 'OMR', 0.10],
+  [/kuwait/i, 'KWD', 0.08],
+  [/sri lanka|colombo/i, 'LKR', 81.5],
+];
+
+/** Ensure report has currency set based on prospect location */
+function ensureCurrency(report: PricingReport): PricingReport {
+  if (report.marketContext.conversionRate && report.marketContext.currency !== 'AED') return report;
+  const loc = `${report.prospect.location} ${report.prospect.name}`;
+  for (const [pattern, currency, rate] of LOCATION_CURRENCY) {
+    if (pattern.test(loc)) {
+      return {
+        ...report,
+        marketContext: { ...report.marketContext, currency, conversionRate: rate },
+        options: report.options.map((o) => ({
+          ...o,
+          perSeatPriceLocal: o.perSeatPriceLocal || Math.round(o.perSeatPrice * rate),
+        })),
+      };
+    }
+  }
+  return report;
+}
+
 interface SavedReport {
   id: string;
   prospectName: string;
@@ -87,7 +122,7 @@ export default function PricingLabPage() {
       } else {
         const aiMsg: ChatMessage = { role: 'model', text: `Analysis complete for ${result.prospect.name}. See the report on the right.` };
         setMessages([...updated, aiMsg]);
-        setReport(result);
+        setReport(ensureCurrency(result));
       }
     } catch (err) {
       const errMsg: ChatMessage = { role: 'model', text: err instanceof Error ? err.message : 'Failed to connect. Please try again.' };
@@ -128,7 +163,7 @@ export default function PricingLabPage() {
   }, [report, messages]);
 
   function loadReport(saved: SavedReport) {
-    setReport(saved.report);
+    setReport(ensureCurrency(saved.report));
     setMessages(saved.conversation || []);
   }
 
