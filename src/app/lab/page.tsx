@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import PricingReportCards from '@/components/lab/PricingReportCards';
 import type { PricingReport } from '@/lib/schemas/pricing-report';
-import { Loader2, Send, Save, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Send, Save, Clock, ChevronDown, ChevronRight, Paperclip, FileText, X } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -27,7 +27,6 @@ const LOCATION_CURRENCY: [RegExp, string, number][] = [
   [/sri lanka|colombo/i, 'LKR', 81.5],
 ];
 
-/** Ensure report has currency set based on prospect location */
 function ensureCurrency(report: PricingReport): PricingReport {
   if (report.marketContext.conversionRate && report.marketContext.currency !== 'AED') return report;
   const loc = `${report.prospect.location} ${report.prospect.name}`;
@@ -46,6 +45,8 @@ function ensureCurrency(report: PricingReport): PricingReport {
   return report;
 }
 
+const ACCEPTED_TYPES = '.pdf,.csv,.xlsx,.xls,.txt,.doc,.docx';
+
 interface SavedReport {
   id: string;
   prospectName: string;
@@ -58,15 +59,16 @@ export default function PricingLabPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [prospectUrl, setProspectUrl] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<PricingReport | null>(null);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Fetch saved reports
   useEffect(() => {
     fetch('/api/pricing-reports')
       .then((r) => r.json())
@@ -74,16 +76,26 @@ export default function PricingLabPage() {
       .catch(() => {});
   }, []);
 
-  // Auto-scroll chat
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  function addFiles(newFiles: FileList | File[]) {
+    const arr = Array.from(newFiles).filter((f) => f.size <= 10 * 1024 * 1024);
+    setFiles((prev) => [...prev, ...arr]);
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && files.length === 0) || loading) return;
 
-    const userMsg: ChatMessage = { role: 'user', text };
+    const fileNames = files.map((f) => f.name).join(', ');
+    const displayText = fileNames ? `${text || 'Analyze attached files'}\n📎 ${fileNames}` : text;
+    const userMsg: ChatMessage = { role: 'user', text: displayText };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput('');
@@ -91,18 +103,34 @@ export default function PricingLabPage() {
     setReport(null);
 
     try {
-      const res = await fetch('/api/pricing-lab', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          prospectUrl: prospectUrl.trim() || undefined,
-          history: messages,
-        }),
-      });
+      let res: Response;
 
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
+      if (files.length > 0) {
+        // Send as FormData with files
+        const formData = new FormData();
+        formData.append('message', text || 'Analyze the attached documents and recommend pricing.');
+        if (prospectUrl.trim()) formData.append('prospectUrl', prospectUrl.trim());
+        formData.append('history', JSON.stringify(messages));
+        for (const f of files) {
+          formData.append('file', f);
+        }
+        res = await fetch('/api/pricing-lab', { method: 'POST', body: formData });
+      } else {
+        res = await fetch('/api/pricing-lab', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            prospectUrl: prospectUrl.trim() || undefined,
+            history: messages,
+          }),
+        });
+      }
+
+      setFiles([]);
+
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
         throw new Error(`Server returned unexpected response (${res.status}). Please try again.`);
       }
 
@@ -117,20 +145,17 @@ export default function PricingLabPage() {
       const result: PricingReport = data.result;
 
       if (result.clarificationNeeded && result.clarificationQuestion) {
-        const clarMsg: ChatMessage = { role: 'model', text: result.clarificationQuestion };
-        setMessages([...updated, clarMsg]);
+        setMessages([...updated, { role: 'model', text: result.clarificationQuestion }]);
       } else {
-        const aiMsg: ChatMessage = { role: 'model', text: `Analysis complete for ${result.prospect.name}. See the report on the right.` };
-        setMessages([...updated, aiMsg]);
+        setMessages([...updated, { role: 'model', text: `Analysis complete for ${result.prospect.name}.` }]);
         setReport(ensureCurrency(result));
       }
     } catch (err) {
-      const errMsg: ChatMessage = { role: 'model', text: err instanceof Error ? err.message : 'Failed to connect. Please try again.' };
-      setMessages([...updated, errMsg]);
+      setMessages([...updated, { role: 'model', text: err instanceof Error ? err.message : 'Failed to connect.' }]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, prospectUrl]);
+  }, [input, loading, messages, prospectUrl, files]);
 
   const handleSave = useCallback(async () => {
     if (!report) return;
@@ -139,27 +164,13 @@ export default function PricingLabPage() {
       const res = await fetch('/api/pricing-reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prospectName: report.prospect.name,
-          report,
-          conversation: messages,
-        }),
+        body: JSON.stringify({ prospectName: report.prospect.name, report, conversation: messages }),
       });
       const data = await res.json();
       if (res.ok) {
-        setSavedReports((prev) => [{
-          id: data.id,
-          prospectName: report.prospect.name,
-          createdAt: new Date().toISOString(),
-          report,
-          conversation: messages,
-        }, ...prev]);
+        setSavedReports((prev) => [{ id: data.id, prospectName: report.prospect.name, createdAt: new Date().toISOString(), report, conversation: messages }, ...prev]);
       }
-    } catch {
-      // silent
-    } finally {
-      setSaving(false);
-    }
+    } catch { /* silent */ } finally { setSaving(false); }
   }, [report, messages]);
 
   function loadReport(saved: SavedReport) {
@@ -172,93 +183,109 @@ export default function PricingLabPage() {
     setMessages([]);
     setInput('');
     setProspectUrl('');
+    setFiles([]);
     inputRef.current?.focus();
   }
+
+  const hasInput = input.trim() || files.length > 0;
 
   return (
     <PageShell
       title="Pricing Lab"
-      subtitle="AI-powered pricing analyst — describe a prospect, get a full pricing recommendation"
+      subtitle="AI-powered pricing analyst"
       actions={
         <div style={{ display: 'flex', gap: 6 }}>
           {report && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 16px', borderRadius: 8, border: 'none',
-                background: '#00c853', color: '#1a1a1a',
-                fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif",
-                opacity: saving ? 0.7 : 1,
-              }}
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Save Report
+            <button onClick={handleSave} disabled={saving} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+              borderRadius: 8, border: 'none', background: '#00c853', color: '#1a1a1a',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              opacity: saving ? 0.7 : 1,
+            }}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Report
             </button>
           )}
           {messages.length > 0 && (
-            <button
-              onClick={startNew}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'transparent', color: '#ffffff',
-                fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
+            <button onClick={startNew} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)',
+              background: 'transparent', color: '#ffffff', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+            }}>
               New Analysis
             </button>
           )}
         </div>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 20, minHeight: 'calc(100vh - 140px)' }}>
-        {/* ===== LEFT PANEL: CHAT ===== */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* URL input */}
-          <input
-            type="url"
-            value={prospectUrl}
-            onChange={(e) => setProspectUrl(e.target.value)}
-            placeholder="Prospect website URL (optional)"
-            style={{
-              padding: '8px 12px', borderRadius: 8,
-              border: '1px solid #e0dbd2', background: '#ffffff',
-              fontSize: 11, fontFamily: "'DM Sans', sans-serif",
-              color: '#1a1a1a', outline: 'none',
-            }}
-          />
+      <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: 20, minHeight: 'calc(100vh - 140px)' }}>
+        {/* ===== LEFT PANEL ===== */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          background: '#ffffff', borderRadius: 12, border: '1px solid #e0dbd2',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '14px 16px', borderBottom: '1px solid #e0dbd2',
+            background: '#1a1a1a',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', fontFamily: "'DM Sans', sans-serif" }}>
+              Prospect Analysis
+            </div>
+            <div style={{ fontSize: 11, color: '#999', fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>
+              Describe the prospect, attach files, or paste a URL
+            </div>
+          </div>
+
+          {/* URL field */}
+          <div style={{ padding: '10px 16px', borderBottom: '1px solid #f0ebe0' }}>
+            <input
+              type="url"
+              value={prospectUrl}
+              onChange={(e) => setProspectUrl(e.target.value)}
+              placeholder="Website URL (optional)"
+              style={{
+                width: '100%', padding: '7px 10px', borderRadius: 6,
+                border: '1px solid #e0dbd2', background: '#faf8f4',
+                fontSize: 11, fontFamily: "'DM Sans', sans-serif",
+                color: '#1a1a1a', outline: 'none',
+              }}
+            />
+          </div>
 
           {/* Chat messages */}
           <div
             ref={scrollRef}
             style={{
-              flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column',
-              gap: 8, maxHeight: 'calc(100vh - 360px)', minHeight: 200,
-              padding: 4,
+              flex: 1, overflowY: 'auto', padding: '12px 16px',
+              display: 'flex', flexDirection: 'column', gap: 8,
+              minHeight: 180,
             }}
           >
             {messages.length === 0 && (
-              <div style={{
-                textAlign: 'center', padding: '32px 16px', color: '#999',
-                fontSize: 12, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.8,
-              }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
-                  Describe a prospect to get started
+              <div style={{ padding: '20px 0', textAlign: 'center' }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}>
+                  Try one of these
                 </p>
-                <p style={{ color: '#999', margin: '4px 0', cursor: 'pointer' }} onClick={() => setInput('Dental clinic chain in Mumbai with 8 branches, about 40 staff, currently using paper records')}>
-                  &quot;Dental clinic chain in Mumbai, 8 branches&quot;
-                </p>
-                <p style={{ color: '#999', margin: '4px 0', cursor: 'pointer' }} onClick={() => setInput('Hospital group in Dubai with 200 beds, looking for EMR + AI automation')}>
-                  &quot;Hospital group in Dubai, 200 beds&quot;
-                </p>
-                <p style={{ color: '#999', margin: '4px 0', cursor: 'pointer' }} onClick={() => setInput('Solo dermatology practice in Abu Dhabi, 2 doctors, wants online booking and WhatsApp integration')}>
-                  &quot;Solo dermatology practice, 2 doctors&quot;
-                </p>
+                {[
+                  'Dental clinic chain in Mumbai, 8 branches',
+                  'Hospital group in Dubai, 200 beds',
+                  'Solo dermatology practice, 2 doctors',
+                ].map((s) => (
+                  <p
+                    key={s}
+                    onClick={() => setInput(s)}
+                    style={{
+                      margin: '6px 0', padding: '8px 12px', borderRadius: 8,
+                      background: '#faf8f4', border: '1px solid #e0dbd2',
+                      fontSize: 11, color: '#666', fontFamily: "'DM Sans', sans-serif",
+                      cursor: 'pointer', transition: 'background 0.15s',
+                    }}
+                  >
+                    {s}
+                  </p>
+                ))}
               </div>
             )}
 
@@ -267,8 +294,8 @@ export default function PricingLabPage() {
                 key={i}
                 style={{
                   alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                  maxWidth: '90%', padding: '8px 12px', borderRadius: 10,
-                  background: msg.role === 'user' ? '#1a1a1a' : '#ffffff',
+                  maxWidth: '88%', padding: '8px 12px', borderRadius: 10,
+                  background: msg.role === 'user' ? '#1a1a1a' : '#faf8f4',
                   color: msg.role === 'user' ? '#ffffff' : '#1a1a1a',
                   border: msg.role === 'model' ? '1px solid #e0dbd2' : 'none',
                   fontSize: 12, fontFamily: "'DM Sans', sans-serif",
@@ -282,40 +309,89 @@ export default function PricingLabPage() {
             {loading && (
               <div style={{
                 alignSelf: 'flex-start', padding: '8px 12px', borderRadius: 10,
-                background: '#ffffff', border: '1px solid #e0dbd2',
+                background: '#faf8f4', border: '1px solid #e0dbd2',
                 display: 'flex', alignItems: 'center', gap: 6,
                 fontSize: 12, color: '#999', fontFamily: "'DM Sans', sans-serif",
               }}>
-                <Loader2 size={14} className="animate-spin" /> Analyzing prospect...
+                <Loader2 size={14} className="animate-spin" /> Analyzing...
               </div>
             )}
           </div>
 
-          {/* Input */}
-          <div style={{ display: 'flex', gap: 8 }}>
+          {/* File chips */}
+          {files.length > 0 && (
+            <div style={{ padding: '6px 16px', display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px solid #f0ebe0' }}>
+              {files.map((f, i) => (
+                <span key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 500,
+                  fontFamily: "'DM Sans', sans-serif", background: '#f0faf0',
+                  border: '1px solid #c8e6c9', color: '#1a1a1a',
+                }}>
+                  <FileText size={10} /> {f.name} ({(f.size / 1024).toFixed(0)}KB)
+                  <button onClick={() => removeFile(i)} style={{
+                    border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+                    color: '#999', display: 'flex',
+                  }}>
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Input area */}
+          <div style={{
+            padding: '10px 16px', borderTop: '1px solid #e0dbd2',
+            display: 'flex', gap: 6, alignItems: 'flex-end',
+          }}>
             <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPTED_TYPES}
+              multiple
+              onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ''; }}
+              style={{ display: 'none' }}
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              title="Attach PDF, Excel, or CSV"
+              style={{
+                padding: '8px', borderRadius: 6, border: '1px solid #e0dbd2',
+                background: '#faf8f4', cursor: 'pointer', display: 'flex',
+                color: '#666',
+              }}
+            >
+              <Paperclip size={14} />
+            </button>
+            <textarea
               ref={inputRef}
-              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Describe the prospect..."
               disabled={loading}
+              rows={1}
               style={{
-                flex: 1, padding: '10px 12px', borderRadius: 8,
-                border: '1px solid #e0dbd2', background: '#ffffff',
+                flex: 1, padding: '8px 10px', borderRadius: 6, resize: 'none',
+                border: '1px solid #e0dbd2', background: '#faf8f4',
                 fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                color: '#1a1a1a', outline: 'none',
+                color: '#1a1a1a', outline: 'none', minHeight: 36, maxHeight: 80,
+              }}
+              onInput={(e) => {
+                const t = e.target as HTMLTextAreaElement;
+                t.style.height = 'auto';
+                t.style.height = Math.min(t.scrollHeight, 80) + 'px';
               }}
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || loading}
+              disabled={!hasInput || loading}
               style={{
-                padding: '10px 14px', borderRadius: 8, border: 'none',
-                background: input.trim() && !loading ? '#1a1a1a' : '#e0dbd2',
-                color: input.trim() && !loading ? '#ffffff' : '#999',
-                cursor: input.trim() && !loading ? 'pointer' : 'default',
+                padding: '8px 12px', borderRadius: 6, border: 'none',
+                background: hasInput && !loading ? '#1a1a1a' : '#e0dbd2',
+                color: hasInput && !loading ? '#ffffff' : '#999',
+                cursor: hasInput && !loading ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -325,40 +401,36 @@ export default function PricingLabPage() {
 
           {/* Saved Reports */}
           {savedReports.length > 0 && (
-            <div style={{
-              background: '#ffffff', borderRadius: 10, border: '1px solid #e0dbd2',
-              overflow: 'hidden',
-            }}>
+            <div style={{ borderTop: '1px solid #e0dbd2' }}>
               <button
                 onClick={() => setShowSaved(!showSaved)}
                 style={{
-                  width: '100%', padding: '10px 12px', border: 'none',
-                  background: 'transparent', cursor: 'pointer',
+                  width: '100%', padding: '10px 16px', border: 'none',
+                  background: '#faf8f4', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600,
-                  color: '#666',
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: '#666',
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Clock size={12} /> Saved Reports ({savedReports.length})
+                  <Clock size={11} /> Saved Reports ({savedReports.length})
                 </span>
-                {showSaved ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {showSaved ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>
               {showSaved && (
-                <div style={{ borderTop: '1px solid #e0dbd2', maxHeight: 200, overflowY: 'auto' }}>
+                <div style={{ maxHeight: 160, overflowY: 'auto' }}>
                   {savedReports.map((r) => (
                     <button
                       key={r.id}
                       onClick={() => loadReport(r)}
                       style={{
-                        width: '100%', padding: '8px 12px', border: 'none',
-                        borderBottom: '1px solid #e0dbd2', background: 'transparent',
+                        width: '100%', padding: '8px 16px', border: 'none',
+                        borderTop: '1px solid #f0ebe0', background: 'transparent',
                         cursor: 'pointer', textAlign: 'left',
                         fontFamily: "'DM Sans', sans-serif", fontSize: 12,
                       }}
                     >
                       <div style={{ fontWeight: 600, color: '#1a1a1a' }}>{r.prospectName}</div>
-                      <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: '#999', marginTop: 1 }}>
                         {new Date(r.createdAt).toLocaleDateString()}
                       </div>
                     </button>
@@ -401,7 +473,7 @@ export default function PricingLabPage() {
                   fontFamily: "'DM Sans', sans-serif", fontSize: 13,
                   color: '#666', lineHeight: 1.6, marginBottom: 0,
                 }}>
-                  Describe a prospect in the chat panel and get a full pricing recommendation with 3 options, profitability analysis, and portfolio comparison.
+                  Describe a prospect, attach documents, or paste a website URL to get a full pricing recommendation.
                 </p>
               </div>
             </div>

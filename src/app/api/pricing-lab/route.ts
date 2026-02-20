@@ -119,6 +119,23 @@ function inferCurrencyFromLocation(report: Record<string, unknown>) {
   }
 }
 
+/** Parse Excel/CSV file to text table */
+async function parseSpreadsheet(buffer: ArrayBuffer): Promise<string> {
+  try {
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const lines: string[] = [];
+    for (const name of workbook.SheetNames.slice(0, 3)) {
+      const sheet = workbook.Sheets[name];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      lines.push(`[Sheet: ${name}]\n${csv}`);
+    }
+    return lines.join('\n\n').substring(0, 5000);
+  } catch {
+    return '[Could not parse spreadsheet]';
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -126,12 +143,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
     }
 
-    const body = await req.json();
-    const { message, prospectUrl, history } = body as {
-      message: string;
-      prospectUrl?: string;
-      history: ChatMessage[];
-    };
+    // Accept both JSON and FormData
+    const contentType = req.headers.get('content-type') || '';
+    let message = '';
+    let prospectUrl = '';
+    let history: ChatMessage[] = [];
+    const fileParts: { inlineData: { mimeType: string; data: string } }[] = [];
+    let fileContext = '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      message = formData.get('message') as string || '';
+      prospectUrl = formData.get('prospectUrl') as string || '';
+      history = JSON.parse(formData.get('history') as string || '[]');
+
+      // Process uploaded files
+      const fileEntries = formData.getAll('file');
+      for (const value of fileEntries) {
+        if (value instanceof File) {
+          const buffer = await value.arrayBuffer();
+          if (value.type === 'application/pdf') {
+            // PDF — send as inline data to Gemini (it can read PDFs natively)
+            fileParts.push({
+              inlineData: {
+                mimeType: 'application/pdf',
+                data: Buffer.from(buffer).toString('base64'),
+              },
+            });
+          } else if (
+            value.type === 'text/csv' ||
+            value.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+            value.type === 'application/vnd.ms-excel' ||
+            value.name.endsWith('.csv') ||
+            value.name.endsWith('.xlsx') ||
+            value.name.endsWith('.xls')
+          ) {
+            // Excel/CSV — parse to text and append
+            const text = await parseSpreadsheet(buffer);
+            fileContext += `\n\n[UPLOADED FILE: ${value.name}]\n${text}`;
+          } else {
+            // Other files — try reading as text
+            try {
+              const text = new TextDecoder().decode(buffer).substring(0, 5000);
+              fileContext += `\n\n[UPLOADED FILE: ${value.name}]\n${text}`;
+            } catch {
+              fileContext += `\n\n[UPLOADED FILE: ${value.name} — could not read]`;
+            }
+          }
+        }
+      }
+    } else {
+      const body = await req.json();
+      message = body.message || '';
+      prospectUrl = body.prospectUrl || '';
+      history = body.history || [];
+    }
 
     if (!message) {
       return NextResponse.json({ error: 'message is required' }, { status: 400 });
@@ -168,13 +234,17 @@ export async function POST(req: Request) {
       systemInstruction: systemPrompt,
     });
 
-    const userMessage = message + websiteContext;
+    const userMessage = message + websiteContext + fileContext;
+    const userParts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[] = [
+      { text: userMessage },
+      ...fileParts,
+    ];
     const contents = [
       ...(history || []).map((msg: ChatMessage) => ({
         role: msg.role,
         parts: [{ text: msg.text }],
       })),
-      { role: 'user' as const, parts: [{ text: userMessage }] },
+      { role: 'user' as const, parts: userParts },
     ];
 
     // Step 4: Call Gemini
