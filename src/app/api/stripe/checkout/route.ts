@@ -62,6 +62,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error('Error creating Stripe checkout session:', error);
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Operation failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
