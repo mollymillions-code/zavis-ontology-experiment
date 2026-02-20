@@ -238,6 +238,19 @@ export const salesGoals = pgTable('sales_goals', {
   updatedBy: text('updated_by'),
 });
 
+// ═══════════════════════════════════════════════════════════
+// PRICING REPORTS
+// ═══════════════════════════════════════════════════════════
+
+export const pricingReports = pgTable('pricing_reports', {
+  id: text('id').primaryKey(),
+  prospectName: text('prospect_name').notNull(),
+  report: jsonb('report').notNull(),
+  conversation: jsonb('conversation').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdBy: text('created_by'),
+});
+
 export const payrollEntries = pgTable('payroll_entries', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),

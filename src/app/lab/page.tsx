@@ -1,662 +1,374 @@
 'use client';
 
-import { useState, useMemo, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import PageShell from '@/components/layout/PageShell';
-import KPICard from '@/components/cards/KPICard';
-import DealComparisonCard from '@/components/lab/DealComparisonCard';
-import { useClientStore } from '@/lib/store/customer-store';
-import { useWhatIfStore } from '@/lib/store/whatif-store';
-import { formatAED } from '@/lib/utils/currency';
-import { isPerSeatClient, computeMRRAtPrice } from '@/lib/utils/customer-mrr';
-import { computeClientUnitRows, type UnitAssumptions } from '@/lib/utils/unit-economics';
-import type { PricingWhatIf, WhatIfClientImpact, MonthlyCost, CostCategory } from '@/lib/models/platform-types';
-import { Save, Trash2, DollarSign, Layers } from 'lucide-react';
+import PricingReportCards from '@/components/lab/PricingReportCards';
+import type { PricingReport } from '@/lib/schemas/pricing-report';
+import { Loader2, Send, Save, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 
-/* ========== Revenue Line Item Types ========== */
+interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
 
-interface RevenueLineItem {
+interface SavedReport {
   id: string;
-  label: string;
-  description: string;
-  unit: 'per_seat' | 'per_client';
-  defaultValue: number;
-  max: number;
-  step: number;
-  color: string;
+  prospectName: string;
+  createdAt: string;
+  report: PricingReport;
+  conversation: ChatMessage[];
 }
 
-const REVENUE_LINE_ITEMS: RevenueLineItem[] = [
-  { id: 'ai_agents', label: 'AI Agents', description: 'AI chatbot & automation per seat', unit: 'per_seat', defaultValue: 0, max: 200, step: 5, color: '#a78bfa' },
-  { id: 'integrations', label: 'Integrations', description: 'API / third-party integrations per client', unit: 'per_client', defaultValue: 0, max: 500, step: 25, color: '#60a5fa' },
-  { id: 'analytics_addon', label: 'Analytics Add-on', description: 'Advanced analytics per seat', unit: 'per_seat', defaultValue: 0, max: 100, step: 5, color: '#34d399' },
-  { id: 'whatsapp_campaigns', label: 'WhatsApp Campaigns', description: 'Campaign messaging per client/mo', unit: 'per_client', defaultValue: 0, max: 300, step: 10, color: '#fbbf24' },
-  { id: 'onboarding_fee', label: 'Onboarding Fee', description: 'One-time setup fee per new client', unit: 'per_client', defaultValue: 0, max: 10000, step: 500, color: '#f472b6' },
-  { id: 'managed_services', label: 'Managed Services', description: 'Dedicated support per client/mo', unit: 'per_client', defaultValue: 0, max: 1000, step: 50, color: '#fb923c' },
-];
+export default function PricingLabPage() {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [prospectUrl, setProspectUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [report, setReport] = useState<PricingReport | null>(null);
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-export default function LabPage() {
-  return (
-    <Suspense fallback={<PageShell title="Pricing Lab" subtitle="Loading..."><div /></PageShell>}>
-      <LabPageContent />
-    </Suspense>
-  );
-}
-
-function LabPageContent() {
-  const searchParams = useSearchParams();
-  const clients = useClientStore((s) => s.clients);
-  const scenarios = useWhatIfStore((s) => s.scenarios);
-  const addScenario = useWhatIfStore((s) => s.addScenario);
-  const deleteScenario = useWhatIfStore((s) => s.deleteScenario);
-
-  // Current average per-seat price
-  const currentAvgPrice = useMemo(() => {
-    const perSeat = clients.filter(isPerSeatClient);
-    if (perSeat.length === 0) return 249;
-    return Math.round(perSeat.reduce((s, c) => s + (c.perSeatCost || 0), 0) / perSeat.length);
-  }, [clients]);
-
-  const [perSeatPrice, setPerSeatPrice] = useState(currentAvgPrice);
-  const [scenarioName, setScenarioName] = useState('');
-  const [activeDealAnalysis, setActiveDealAnalysis] = useState<PricingWhatIf['dealAnalysis'] | null>(null);
-
-  // Revenue line item state
-  const [lineItemValues, setLineItemValues] = useState<Record<string, number>>(() => {
-    const init: Record<string, number> = {};
-    REVENUE_LINE_ITEMS.forEach((item) => { init[item.id] = item.defaultValue; });
-    return init;
-  });
-
-  // Cost state
-  const [loadingCosts, setLoadingCosts] = useState(true);
-  const [editedCosts, setEditedCosts] = useState<Record<CostCategory, number>>({} as Record<CostCategory, number>);
-
-  // Load scenario from URL params (?scenario=whatif-xxx)
+  // Fetch saved reports
   useEffect(() => {
-    const scenarioId = searchParams.get('scenario');
-    if (!scenarioId) return;
-
-    const scenario = scenarios.find((s) => s.id === scenarioId);
-    if (!scenario) return;
-
-    setPerSeatPrice(scenario.modifiedPerSeatPrice);
-    if (scenario.lineItemValues) setLineItemValues(scenario.lineItemValues);
-    if (scenario.costOverrides) setEditedCosts(scenario.costOverrides as Record<CostCategory, number>);
-    if (scenario.dealAnalysis) setActiveDealAnalysis(scenario.dealAnalysis);
-  }, [searchParams, scenarios]);
-
-  // Fetch costs from API
-  useEffect(() => {
-    fetch('/api/costs')
-      .then((res) => res.json())
-      .then((data: MonthlyCost[]) => {
-        const actualCosts = data.filter((c) => c.type === 'actual');
-        const costMap: Record<string, number> = {};
-        actualCosts.forEach((c) => { costMap[c.category] = c.amount; });
-        setEditedCosts(costMap as Record<CostCategory, number>);
-        setLoadingCosts(false);
-      })
-      .catch(() => setLoadingCosts(false));
+    fetch('/api/pricing-reports')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setSavedReports(data); })
+      .catch(() => {});
   }, []);
 
-  const getCostValue = (category: CostCategory): number => editedCosts[category] || 0;
+  // Auto-scroll chat
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
 
-  const activeClients = useMemo(() => clients.filter((c) => c.status === 'active'), [clients]);
-  const activeClientCount = activeClients.length;
-  const totalSeats = activeClients.reduce((s, c) => s + (c.seatCount || 0), 0);
-  const totalCostProjected = Object.values(editedCosts).reduce((s, amt) => s + amt, 0);
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || loading) return;
 
-  const impacts = useMemo<WhatIfClientImpact[]>(() => {
-    return activeClients.map((client) => {
-      const currentMRR = client.mrr;
-      const isPSClient = isPerSeatClient(client);
-      const projectedMRR = isPSClient ? computeMRRAtPrice(client, perSeatPrice) : currentMRR;
-      return {
-        clientId: client.id,
-        clientName: client.name,
-        pricingModel: client.pricingModel,
-        currentMRR,
-        projectedMRR,
-        delta: projectedMRR - currentMRR,
-        isAffected: isPSClient && projectedMRR !== currentMRR,
-      };
-    });
-  }, [activeClients, perSeatPrice]);
+    const userMsg: ChatMessage = { role: 'user', text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    setInput('');
+    setLoading(true);
+    setReport(null);
 
-  const currentTotal = impacts.reduce((s, i) => s + i.currentMRR, 0);
-  const projectedTotal = impacts.reduce((s, i) => s + i.projectedMRR, 0);
-  const mrrDelta = projectedTotal - currentTotal;
+    try {
+      const res = await fetch('/api/pricing-lab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          prospectUrl: prospectUrl.trim() || undefined,
+          history: messages,
+        }),
+      });
 
-  /* ========== Line Item Revenue Computation ========== */
-  const lineItemRevenue = useMemo(() => {
-    let totalMonthly = 0;
-    const breakdown: { id: string; label: string; unitPrice: number; quantity: number; monthly: number; color: string }[] = [];
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Server returned unexpected response (${res.status}). Please try again.`);
+      }
 
-    REVENUE_LINE_ITEMS.forEach((item) => {
-      const unitPrice = lineItemValues[item.id] || 0;
-      if (unitPrice <= 0) return;
-      let quantity = 0;
-      if (item.unit === 'per_seat') quantity = totalSeats;
-      else if (item.unit === 'per_client') quantity = activeClientCount;
-      const monthly = unitPrice * quantity;
-      totalMonthly += monthly;
-      breakdown.push({ id: item.id, label: item.label, unitPrice, quantity, monthly, color: item.color });
-    });
+      const data = await res.json();
 
-    return { totalMonthly, breakdown };
-  }, [lineItemValues, totalSeats, activeClientCount]);
+      if (!res.ok) {
+        const errMsg: ChatMessage = { role: 'model', text: data.error || 'Analysis failed. Please try again.' };
+        setMessages([...updated, errMsg]);
+        return;
+      }
 
-  const totalProjectedMRR = projectedTotal + lineItemRevenue.totalMonthly;
-  const projectedNetContribution = totalProjectedMRR - totalCostProjected;
-  const projectedRevenuePerSeat = totalSeats > 0 ? totalProjectedMRR / totalSeats : 0;
-  const projectedCostPerSeat = totalSeats > 0 ? totalCostProjected / totalSeats : 0;
-  const projectedContributionPerSeat = projectedRevenuePerSeat - projectedCostPerSeat;
-  const projectedMarginPercent = projectedRevenuePerSeat > 0
-    ? (projectedContributionPerSeat / projectedRevenuePerSeat) * 100 : 0;
+      const result: PricingReport = data.result;
 
-  // Build unit assumptions from edited costs for per-client breakdown
-  const assumptions: UnitAssumptions = {
-    platformLicensePerSeat: (getCostValue('chatwoot_seats') + getCostValue('chatwoot_sub')) / Math.max(totalSeats, 1),
-    aiApiCostRate: 0.60,
-    serverHosting: getCostValue('aws'),
-    engineering: getCostValue('payroll'),
-    softwareTools: 0,
-    accountMgmtPerClient: getCostValue('sales_spend') / Math.max(activeClients.length, 1),
-    partnerCommissionRate: currentTotal > 0 ? getCostValue('commissions') / currentTotal : 0.10,
-    aiAgentRevPerSeat: (lineItemValues['ai_agents'] || 0) + (lineItemValues['analytics_addon'] || 0),
-    addOnRevPerSeat: 0,
-  };
+      if (result.clarificationNeeded && result.clarificationQuestion) {
+        const clarMsg: ChatMessage = { role: 'model', text: result.clarificationQuestion };
+        setMessages([...updated, clarMsg]);
+      } else {
+        const aiMsg: ChatMessage = { role: 'model', text: `Analysis complete for ${result.prospect.name}. See the report on the right.` };
+        setMessages([...updated, aiMsg]);
+        setReport(result);
+      }
+    } catch (err) {
+      const errMsg: ChatMessage = { role: 'model', text: err instanceof Error ? err.message : 'Failed to connect. Please try again.' };
+      setMessages([...updated, errMsg]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages, prospectUrl]);
 
-  // Compute per-client unit economics using projected pricing
-  const clientsWithProjectedMRR = activeClients.map((c) => {
-    const isPSClient = isPerSeatClient(c);
-    const projectedMRR = isPSClient ? computeMRRAtPrice(c, perSeatPrice) : c.mrr;
-    return { ...c, mrr: projectedMRR };
-  });
+  const handleSave = useCallback(async () => {
+    if (!report) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/pricing-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospectName: report.prospect.name,
+          report,
+          conversation: messages,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSavedReports((prev) => [{
+          id: data.id,
+          prospectName: report.prospect.name,
+          createdAt: new Date().toISOString(),
+          report,
+          conversation: messages,
+        }, ...prev]);
+      }
+    } catch {
+      // silent
+    } finally {
+      setSaving(false);
+    }
+  }, [report, messages]);
 
-  const unitRows = computeClientUnitRows(clientsWithProjectedMRR, assumptions);
-
-  function handleSave() {
-    if (!scenarioName.trim()) return;
-    const scenario: PricingWhatIf = {
-      id: `whatif-${Date.now()}`,
-      name: scenarioName.trim(),
-      createdAt: new Date().toISOString(),
-      modifiedPerSeatPrice: perSeatPrice,
-      source: 'manual',
-      lineItemValues,
-      costOverrides: editedCosts as Record<string, number>,
-    };
-    addScenario(scenario);
-    setScenarioName('');
+  function loadReport(saved: SavedReport) {
+    setReport(saved.report);
+    setMessages(saved.conversation || []);
   }
 
-  function handleLoadScenario(scenario: PricingWhatIf) {
-    setPerSeatPrice(scenario.modifiedPerSeatPrice);
-    if (scenario.lineItemValues) setLineItemValues(scenario.lineItemValues);
-    if (scenario.costOverrides) setEditedCosts(scenario.costOverrides as Record<CostCategory, number>);
-    if (scenario.dealAnalysis) setActiveDealAnalysis(scenario.dealAnalysis);
-    else setActiveDealAnalysis(null);
+  function startNew() {
+    setReport(null);
+    setMessages([]);
+    setInput('');
+    setProspectUrl('');
+    inputRef.current?.focus();
   }
-
-  const labelStyle = {
-    fontSize: 11, fontWeight: 500 as const, color: '#666',
-    fontFamily: "'DM Sans', sans-serif", marginBottom: 4, display: 'block' as const,
-  };
-
-  const priceDelta = perSeatPrice - currentAvgPrice;
-
-  // Revenue streams for summary table
-  const revenueStreams = useMemo(() => {
-    const streams: { name: string; monthly: number; annual: number; color: string }[] = [
-      { name: 'Subscription MRR', monthly: projectedTotal, annual: projectedTotal * 12, color: '#00c853' },
-    ];
-    lineItemRevenue.breakdown.forEach((b) => {
-      streams.push({ name: b.label, monthly: b.monthly, annual: b.monthly * 12, color: b.color });
-    });
-    return streams;
-  }, [projectedTotal, lineItemRevenue]);
-
-  const totalAnnual = totalProjectedMRR * 12;
 
   return (
-    <PageShell title="Pricing Lab" subtitle="Strategic pricing, revenue streams & profitability simulation">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, alignItems: 'start' }}>
-        {/* ===== SIDEBAR CONTROLS ===== */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Revenue Controls */}
-          <div style={{
-            background: '#ffffff', borderRadius: 12, padding: 20,
-            border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <DollarSign size={16} style={{ color: '#00c853' }} />
-              <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 14, color: '#1a1a1a', margin: 0 }}>
-                Subscription Pricing
-              </h3>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div className="flex justify-between" style={{ marginBottom: 6 }}>
-                <label style={labelStyle}>Price per Seat</label>
-                <span style={{
-                  fontSize: 11, fontFamily: "'Space Mono', monospace", fontWeight: 700,
-                  color: priceDelta > 0 ? '#00a844' : priceDelta < 0 ? '#ff3d00' : '#999',
-                }}>
-                  {priceDelta !== 0 ? `${priceDelta > 0 ? '+' : ''}${formatAED(priceDelta)}` : 'No change'}
-                </span>
-              </div>
-              <input
-                type="range" min={100} max={500} step={5}
-                value={perSeatPrice}
-                onChange={(e) => setPerSeatPrice(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#00c853', height: 6 }}
-              />
-              <div className="flex justify-between" style={{ marginTop: 4 }}>
-                <span style={{ fontSize: 10, color: '#999', fontFamily: "'Space Mono', monospace" }}>{formatAED(100)}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#1a1a1a' }}>{formatAED(perSeatPrice)}</span>
-                <span style={{ fontSize: 10, color: '#999', fontFamily: "'Space Mono', monospace" }}>{formatAED(500)}</span>
-              </div>
-            </div>
-
-            <div style={{ padding: 12, background: '#f5f0e8', borderRadius: 8, marginBottom: 16 }}>
-              <p style={{ fontSize: 10, color: '#666', fontFamily: "'DM Sans', sans-serif", marginBottom: 4 }}>Current average per-seat price</p>
-              <p style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#1a1a1a' }}>
-                {formatAED(currentAvgPrice)} /seat
-              </p>
-            </div>
-
+    <PageShell
+      title="Pricing Lab"
+      subtitle="AI-powered pricing analyst — describe a prospect, get a full pricing recommendation"
+      actions={
+        <div style={{ display: 'flex', gap: 6 }}>
+          {report && (
             <button
-              onClick={() => setPerSeatPrice(currentAvgPrice)}
+              onClick={handleSave}
+              disabled={saving}
               style={{
-                width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e0dbd2',
-                background: '#fff', fontSize: 11, fontWeight: 600, color: '#666',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 8, border: 'none',
+                background: '#00c853', color: '#1a1a1a',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                opacity: saving ? 0.7 : 1,
               }}
             >
-              Reset to Current
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Save Report
             </button>
-          </div>
+          )}
+          {messages.length > 0 && (
+            <button
+              onClick={startNew}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'transparent', color: '#ffffff',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              New Analysis
+            </button>
+          )}
+        </div>
+      }
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 20, minHeight: 'calc(100vh - 140px)' }}>
+        {/* ===== LEFT PANEL: CHAT ===== */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* URL input */}
+          <input
+            type="url"
+            value={prospectUrl}
+            onChange={(e) => setProspectUrl(e.target.value)}
+            placeholder="Prospect website URL (optional)"
+            style={{
+              padding: '8px 12px', borderRadius: 8,
+              border: '1px solid #e0dbd2', background: '#ffffff',
+              fontSize: 11, fontFamily: "'DM Sans', sans-serif",
+              color: '#1a1a1a', outline: 'none',
+            }}
+          />
 
-          {/* Revenue Line Items */}
-          <div style={{
-            background: '#ffffff', borderRadius: 12, padding: 20,
-            border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Layers size={16} style={{ color: '#a78bfa' }} />
-              <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 14, color: '#1a1a1a', margin: 0 }}>
-                Revenue Line Items
-              </h3>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {REVENUE_LINE_ITEMS.map((item) => {
-                const val = lineItemValues[item.id] || 0;
-                const quantity = item.unit === 'per_seat' ? totalSeats : activeClientCount;
-                const projected = val * quantity;
-                return (
-                  <div key={item.id}>
-                    <div className="flex justify-between" style={{ marginBottom: 2 }}>
-                      <div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif" }}>{item.label}</span>
-                        <span style={{ fontSize: 9, color: '#999', marginLeft: 6, fontFamily: "'DM Sans', sans-serif" }}>
-                          {item.unit === 'per_seat' ? `× ${totalSeats} seats` : `× ${activeClientCount} clients`}
-                        </span>
-                      </div>
-                      <span style={{
-                        fontSize: 11, fontFamily: "'Space Mono', monospace", fontWeight: 700,
-                        color: val > 0 ? item.color : '#ccc',
-                      }}>
-                        {formatAED(val)}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 9, color: '#999', fontFamily: "'DM Sans', sans-serif", marginBottom: 4 }}>{item.description}</p>
-                    <input
-                      type="range" min={0} max={item.max} step={item.step}
-                      value={val}
-                      onChange={(e) => setLineItemValues({ ...lineItemValues, [item.id]: Number(e.target.value) })}
-                      style={{ width: '100%', accentColor: item.color, height: 4 }}
-                    />
-                    {val > 0 && (
-                      <p style={{ fontSize: 10, color: '#666', fontFamily: "'Space Mono', monospace", marginTop: 2, textAlign: 'right' }}>
-                        = {formatAED(projected)}/mo
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {lineItemRevenue.totalMonthly > 0 && (
+          {/* Chat messages */}
+          <div
+            ref={scrollRef}
+            style={{
+              flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column',
+              gap: 8, maxHeight: 'calc(100vh - 360px)', minHeight: 200,
+              padding: 4,
+            }}
+          >
+            {messages.length === 0 && (
               <div style={{
-                padding: 10, background: '#f3f0ff', borderRadius: 8, marginTop: 14,
-                border: '1px solid #e8e0ff',
+                textAlign: 'center', padding: '32px 16px', color: '#999',
+                fontSize: 12, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.8,
               }}>
-                <p style={{ fontSize: 10, color: '#666', fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Total Line Item Revenue</p>
-                <p style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#7c3aed' }}>
-                  {formatAED(lineItemRevenue.totalMonthly)}/mo
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
+                  Describe a prospect to get started
+                </p>
+                <p style={{ color: '#999', margin: '4px 0', cursor: 'pointer' }} onClick={() => setInput('Dental clinic chain in Mumbai with 8 branches, about 40 staff, currently using paper records')}>
+                  &quot;Dental clinic chain in Mumbai, 8 branches&quot;
+                </p>
+                <p style={{ color: '#999', margin: '4px 0', cursor: 'pointer' }} onClick={() => setInput('Hospital group in Dubai with 200 beds, looking for EMR + AI automation')}>
+                  &quot;Hospital group in Dubai, 200 beds&quot;
+                </p>
+                <p style={{ color: '#999', margin: '4px 0', cursor: 'pointer' }} onClick={() => setInput('Solo dermatology practice in Abu Dhabi, 2 doctors, wants online booking and WhatsApp integration')}>
+                  &quot;Solo dermatology practice, 2 doctors&quot;
                 </p>
               </div>
             )}
 
-            <button
-              onClick={() => {
-                const reset: Record<string, number> = {};
-                REVENUE_LINE_ITEMS.forEach((item) => { reset[item.id] = 0; });
-                setLineItemValues(reset);
-              }}
-              style={{
-                width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e0dbd2',
-                background: '#fff', fontSize: 11, fontWeight: 600, color: '#666',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 12,
-              }}
-            >
-              Reset All
-            </button>
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                style={{
+                  alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '90%', padding: '8px 12px', borderRadius: 10,
+                  background: msg.role === 'user' ? '#1a1a1a' : '#ffffff',
+                  color: msg.role === 'user' ? '#ffffff' : '#1a1a1a',
+                  border: msg.role === 'model' ? '1px solid #e0dbd2' : 'none',
+                  fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                  lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                }}
+              >
+                {msg.text}
+              </div>
+            ))}
+
+            {loading && (
+              <div style={{
+                alignSelf: 'flex-start', padding: '8px 12px', borderRadius: 10,
+                background: '#ffffff', border: '1px solid #e0dbd2',
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 12, color: '#999', fontFamily: "'DM Sans', sans-serif",
+              }}>
+                <Loader2 size={14} className="animate-spin" /> Analyzing prospect...
+              </div>
+            )}
           </div>
 
-          {/* Cost Controls */}
-          {!loadingCosts && (
-            <div style={{
-              background: '#ffffff', borderRadius: 12, padding: 20,
-              border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <DollarSign size={16} style={{ color: '#ff6e40' }} />
-                <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 14, color: '#1a1a1a', margin: 0 }}>Costs</h3>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {(['aws', 'payroll', 'chatwoot_seats', 'sales_spend', 'commissions'] as CostCategory[]).map((cat) => {
-                  const labels: Record<CostCategory, string> = {
-                    aws: 'AWS', chatwoot_seats: 'Chatwoot Seats', payroll: 'Payroll',
-                    sales_spend: 'Sales Spend', chatwoot_sub: 'Chatwoot Sub', commissions: 'Commissions',
-                  };
-                  const maxValues: Record<CostCategory, number> = {
-                    aws: 10000, chatwoot_seats: 5000, payroll: 150000,
-                    sales_spend: 10000, chatwoot_sub: 1000, commissions: 20000,
-                  };
-                  return (
-                    <div key={cat} style={{ marginBottom: 8 }}>
-                      <div className="flex justify-between" style={{ marginBottom: 4 }}>
-                        <label style={{ ...labelStyle, marginBottom: 0 }}>{labels[cat]}</label>
-                        <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", fontWeight: 700, color: '#1a1a1a' }}>
-                          {formatAED(getCostValue(cat))}
-                        </span>
-                      </div>
-                      <input
-                        type="range" min={0} max={maxValues[cat]}
-                        step={cat === 'payroll' ? 1000 : cat === 'aws' || cat === 'sales_spend' || cat === 'commissions' ? 100 : 50}
-                        value={getCostValue(cat)}
-                        onChange={(e) => setEditedCosts({ ...editedCosts, [cat]: Number(e.target.value) })}
-                        style={{ width: '100%', accentColor: '#ff6e40', height: 4 }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ padding: 10, background: '#fff5f2', borderRadius: 8, marginTop: 12, border: '1px solid #ffe0d9' }}>
-                <p style={{ fontSize: 10, color: '#666', fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Total Monthly Costs</p>
-                <p style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Mono', monospace", color: '#ff6e40' }}>{formatAED(totalCostProjected)}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Save Scenario */}
-          <div style={{
-            background: '#ffffff', borderRadius: 12, padding: 20,
-            border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          }}>
-            <h4 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 13, color: '#1a1a1a', marginBottom: 12 }}>Save Scenario</h4>
+          {/* Input */}
+          <div style={{ display: 'flex', gap: 8 }}>
             <input
-              placeholder="Scenario name..."
-              value={scenarioName}
-              onChange={(e) => setScenarioName(e.target.value)}
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+              placeholder="Describe the prospect..."
+              disabled={loading}
               style={{
-                width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #e0dbd2',
-                fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 8, outline: 'none',
+                flex: 1, padding: '10px 12px', borderRadius: 8,
+                border: '1px solid #e0dbd2', background: '#ffffff',
+                fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                color: '#1a1a1a', outline: 'none',
               }}
             />
             <button
-              onClick={handleSave}
-              disabled={!scenarioName.trim()}
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
               style={{
-                width: '100%', padding: '8px', borderRadius: 6, border: 'none',
-                background: scenarioName.trim() ? '#00c853' : '#e0dbd2',
-                color: scenarioName.trim() ? '#1a1a1a' : '#999',
-                fontSize: 12, fontWeight: 700, cursor: scenarioName.trim() ? 'pointer' : 'default',
-                fontFamily: "'DM Sans', sans-serif",
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '10px 14px', borderRadius: 8, border: 'none',
+                background: input.trim() && !loading ? '#1a1a1a' : '#e0dbd2',
+                color: input.trim() && !loading ? '#ffffff' : '#999',
+                cursor: input.trim() && !loading ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <Save className="w-3.5 h-3.5" />
-              Save
+              <Send size={14} />
             </button>
           </div>
+
+          {/* Saved Reports */}
+          {savedReports.length > 0 && (
+            <div style={{
+              background: '#ffffff', borderRadius: 10, border: '1px solid #e0dbd2',
+              overflow: 'hidden',
+            }}>
+              <button
+                onClick={() => setShowSaved(!showSaved)}
+                style={{
+                  width: '100%', padding: '10px 12px', border: 'none',
+                  background: 'transparent', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600,
+                  color: '#666',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Clock size={12} /> Saved Reports ({savedReports.length})
+                </span>
+                {showSaved ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+              {showSaved && (
+                <div style={{ borderTop: '1px solid #e0dbd2', maxHeight: 200, overflowY: 'auto' }}>
+                  {savedReports.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => loadReport(r)}
+                      style={{
+                        width: '100%', padding: '8px 12px', border: 'none',
+                        borderBottom: '1px solid #e0dbd2', background: 'transparent',
+                        cursor: 'pointer', textAlign: 'left',
+                        fontFamily: "'DM Sans', sans-serif", fontSize: 12,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: '#1a1a1a' }}>{r.prospectName}</div>
+                      <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                        {new Date(r.createdAt).toLocaleDateString()}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* ===== RESULTS ===== */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Deal Analysis Banner (from contract extraction) */}
-          {activeDealAnalysis && (
-            <DealComparisonCard
-              dealAnalysis={activeDealAnalysis}
-              currentPerSeatPrice={currentAvgPrice}
-              onDismiss={() => setActiveDealAnalysis(null)}
-            />
-          )}
-
-          {/* KPI Row 1: Revenue */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            <KPICard title="Subscription MRR" value={formatAED(projectedTotal)} accent={mrrDelta >= 0 ? '#00c853' : '#ff3d00'} subtitle={`${mrrDelta >= 0 ? '+' : ''}${formatAED(mrrDelta)} delta`} />
-            <KPICard title="Line Item Revenue" value={formatAED(lineItemRevenue.totalMonthly)} accent="#a78bfa" subtitle={`${lineItemRevenue.breakdown.length} active streams`} />
-            <KPICard title="Total Projected MRR" value={formatAED(totalProjectedMRR)} accent="#00c853" subtitle={`ARR ${formatAED(totalAnnual)}`} />
-            <KPICard title="Monthly Costs" value={formatAED(totalCostProjected)} accent="#ff6e40" />
-          </div>
-
-          {/* KPI Row 2: Profitability */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            <KPICard title="Net Contribution" value={formatAED(projectedNetContribution)} accent={projectedNetContribution >= 0 ? '#00c853' : '#ff3d00'} />
-            <KPICard title="Margin %" value={`${projectedMarginPercent.toFixed(1)}%`} accent={projectedMarginPercent >= 50 ? '#00c853' : projectedMarginPercent >= 30 ? '#fbbf24' : '#ff6e40'} />
-            <KPICard title="Revenue / Seat" value={formatAED(projectedRevenuePerSeat)} accent="#2979ff" />
-            <KPICard title="Contribution / Seat" value={formatAED(projectedContributionPerSeat)} accent={projectedContributionPerSeat >= 0 ? '#00c853' : '#ff3d00'} />
-          </div>
-
-          {/* Revenue Streams Breakdown */}
-          {revenueStreams.length > 0 && (
+        {/* ===== RIGHT PANEL: REPORT ===== */}
+        <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 140px)' }}>
+          {report ? (
+            <PricingReportCards report={report} />
+          ) : (
             <div style={{
-              background: '#ffffff', borderRadius: 12, padding: 24,
-              border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              height: '100%', minHeight: 400,
             }}>
-              <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginBottom: 16 }}>
-                Revenue Streams Breakdown
-              </h3>
-              <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
-                    {['Stream', 'Monthly', 'Annual', 'Share'].map((h) => (
-                      <th key={h} style={{
-                        padding: '10px 8px', textAlign: h === 'Stream' ? 'left' : 'right',
-                        fontWeight: 600, color: '#666', textTransform: 'uppercase', fontSize: 10,
-                        letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif",
-                      }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {revenueStreams.map((stream, i) => {
-                    const share = totalProjectedMRR > 0 ? (stream.monthly / totalProjectedMRR) * 100 : 0;
-                    return (
-                      <tr key={stream.name} style={{ borderBottom: '1px solid #e0dbd2', background: i % 2 === 0 ? '#fafafa' : '#fff' }}>
-                        <td style={{ padding: '10px 8px', fontFamily: "'DM Sans', sans-serif" }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: 2, background: stream.color, flexShrink: 0 }} />
-                            <span style={{ fontWeight: 600, color: '#1a1a1a' }}>{stream.name}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 600, color: '#1a1a1a' }}>
-                          {formatAED(stream.monthly)}
-                        </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", color: '#666' }}>
-                          {formatAED(stream.annual)}
-                        </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                            <div style={{ width: 48, height: 6, background: '#f0ebe0', borderRadius: 3, overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(share, 100)}%`, height: '100%', background: stream.color, borderRadius: 3 }} />
-                            </div>
-                            <span style={{ fontSize: 10, fontFamily: "'Space Mono', monospace", fontWeight: 600, color: '#666', minWidth: 32 }}>
-                              {share.toFixed(0)}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr style={{ borderTop: '2px solid #e0dbd2', background: '#f5f0e8' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: 700, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif" }}>TOTAL</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: '#00c853' }}>
-                      {formatAED(totalProjectedMRR)}
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: '#1a1a1a' }}>
-                      {formatAED(totalAnnual)}
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: '#666' }}>100%</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Per-Client Unit Economics */}
-          <div style={{
-            background: '#ffffff', borderRadius: 12, padding: 24,
-            border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          }}>
-            <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginBottom: 16 }}>
-              Per-Client Unit Economics
-            </h3>
-            <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
-                  {['Client', 'Seats', 'MRR', 'Rev/Seat', 'Cost/Seat', 'Contribution/Seat', 'Margin %', 'Total Contribution'].map((h) => (
-                    <th key={h} style={{
-                      padding: '10px 8px', textAlign: h === 'Client' ? 'left' : 'right',
-                      fontWeight: 600, color: '#666', textTransform: 'uppercase', fontSize: 10,
-                      letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif",
-                    }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {unitRows.map((row, i) => {
-                  const impact = impacts.find((imp) => imp.clientId === row.clientId);
-                  const isAffected = impact?.isAffected || false;
-                  return (
-                    <tr key={row.clientId} style={{
-                      borderBottom: '1px solid #e0dbd2',
-                      background: isAffected ? '#f0faf0' : i % 2 === 0 ? '#fafafa' : '#fff',
-                    }}>
-                      <td style={{ padding: '10px 8px', fontWeight: 600, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif" }}>{row.clientName}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", color: '#666' }}>{row.seats}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 600, color: '#1a1a1a' }}>{formatAED(row.totalRevenue)}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", color: '#666' }}>{formatAED(row.revenuePerSeat)}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", color: '#ff6e40' }}>{formatAED(row.totalCostPerSeat)}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: row.contributionPerSeat >= 0 ? '#00a844' : '#ff3d00' }}>
-                        {formatAED(row.contributionPerSeat)}
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 600, color: row.marginPercent >= 50 ? '#00a844' : row.marginPercent >= 30 ? '#fbbf24' : '#ff6e40' }}>
-                        {row.marginPercent.toFixed(1)}%
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: row.totalContribution >= 0 ? '#00a844' : '#ff3d00' }}>
-                        {formatAED(row.totalContribution)}
-                      </td>
-                    </tr>
-                  );
-                })}
-                <tr style={{ borderTop: '2px solid #e0dbd2', background: '#f5f0e8', fontWeight: 700 }}>
-                  <td colSpan={2} style={{ padding: '12px 8px', fontWeight: 700, color: '#1a1a1a', fontFamily: "'DM Sans', sans-serif" }}>TOTAL</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: '#00c853' }}>{formatAED(projectedTotal)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", color: '#666' }}>{formatAED(projectedRevenuePerSeat)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", color: '#ff6e40' }}>{formatAED(projectedCostPerSeat)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: projectedContributionPerSeat >= 0 ? '#00a844' : '#ff3d00' }}>
-                    {formatAED(projectedContributionPerSeat)}
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: projectedMarginPercent >= 50 ? '#00a844' : projectedMarginPercent >= 30 ? '#fbbf24' : '#ff6e40' }}>
-                    {projectedMarginPercent.toFixed(1)}%
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace", fontWeight: 700, color: projectedNetContribution >= 0 ? '#00a844' : '#ff3d00' }}>
-                    {formatAED(projectedNetContribution)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Saved Scenarios */}
-          {scenarios.length > 0 && (
-            <div style={{
-              background: '#ffffff', borderRadius: 12, padding: 24,
-              border: '1px solid #e0dbd2', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}>
-              <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginBottom: 16 }}>
-                Saved Scenarios
-              </h3>
-              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e0dbd2' }}>
-                    {['Name', 'Per-Seat Price', 'Date', ''].map((h) => (
-                      <th key={h} style={{
-                        padding: '10px 8px', textAlign: h === 'Per-Seat Price' ? 'right' : 'left',
-                        fontWeight: 600, color: '#666', textTransform: 'uppercase', fontSize: 10,
-                        fontFamily: "'DM Sans', sans-serif",
-                      }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {scenarios.map((scenario, i) => (
-                    <tr key={scenario.id} style={{ borderBottom: '1px solid #e0dbd2', background: i % 2 === 0 ? '#fafafa' : '#fff' }}>
-                      <td style={{ padding: '10px 8px' }}>
-                        <button
-                          onClick={() => handleLoadScenario(scenario)}
-                          style={{
-                            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-                            fontWeight: 600, color: '#2979ff', fontFamily: "'DM Sans', sans-serif", fontSize: 12,
-                            textDecoration: 'underline', textUnderlineOffset: 2,
-                          }}
-                        >
-                          {scenario.name}
-                        </button>
-                        {scenario.source === 'contract_extraction' && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f3f0ff',
-                            padding: '1px 5px', borderRadius: 3, marginLeft: 6,
-                          }}>
-                            CONTRACT
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: "'Space Mono', monospace" }}>{formatAED(scenario.modifiedPerSeatPrice)}</td>
-                      <td style={{ padding: '10px 8px', fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#999' }}>{scenario.createdAt.slice(0, 10)}</td>
-                      <td style={{ padding: '10px 8px' }}>
-                        <button onClick={() => deleteScenario(scenario.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ff3d00', padding: 2 }}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{
+                textAlign: 'center', padding: 40,
+                background: '#ffffff', borderRadius: 16,
+                border: '1px solid #e0dbd2', maxWidth: 400,
+              }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: 16, background: '#00c853',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px', fontSize: 28, fontWeight: 900,
+                  fontFamily: 'monospace', color: '#1a1a1a',
+                }}>
+                  Z
+                </div>
+                <h3 style={{
+                  fontFamily: "'DM Sans', sans-serif", fontWeight: 700,
+                  fontSize: 18, color: '#1a1a1a', marginBottom: 8,
+                }}>
+                  Pricing Analyst
+                </h3>
+                <p style={{
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                  color: '#666', lineHeight: 1.6, marginBottom: 0,
+                }}>
+                  Describe a prospect in the chat panel and get a full pricing recommendation with 3 options, profitability analysis, and portfolio comparison.
+                </p>
+              </div>
             </div>
           )}
         </div>
